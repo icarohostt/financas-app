@@ -651,6 +651,19 @@ function plano(ym) {
     fechado: !!s.fechado, fechamento: s.fechamento
   };
 }
+/* Vales (ex.: VA): o saldo que sobra num ciclo passa sozinho para o seguinte.
+   valeDesde = primeiro ciclo acompanhado; valeSaldoInicial = saldo que já havia no cartão nesse ciclo. */
+function valeInfo(ym, f, prof) {
+  const p = plano(ym), credito = p.rendas[f.saldoDe] || 0, desde = f.valeDesde;
+  let sobra = 0;
+  if (desde && ym === desde) sobra = f.valeSaldoInicial || 0;
+  else if (desde && ym > desde && (prof || 0) < 36 && hojeISO() > cicloRange(ymAdd(ym, -1)).fim) { // só depois que o ciclo anterior terminou
+    const ant = valeInfo(ymAdd(ym, -1), f, (prof || 0) + 1); sobra = Math.max(0, ant.saldo);
+  }
+  const uso = soma(itensDoCiclo(ym).filter(i => i.l.forma === f.id).map(i => i.valor));
+  return { credito, sobra, uso, disponivel: credito + sobra, saldo: credito + sobra - uso };
+}
+function sobraVales(ym) { return soma(((cfg() && cfg().formas) || []).filter(f => f.saldoDe).map(f => valeInfo(ym, f).sobra)); }
 function valorParcela(total, n, k) { const base = Math.floor(total / n); return k === 1 ? total - base * (n - 1) : base; }
 function itensDoCiclo(ym) {
   const out = [];
@@ -662,7 +675,7 @@ function itensDoCiclo(ym) {
 }
 function resumo(ym) {
   const c = cfg(), p = plano(ym), itens = itensDoCiclo(ym);
-  const renda = somaObj(p.rendas) + soma(p.extras.map(e => e.valor));
+  const renda = somaObj(p.rendas) + soma(p.extras.map(e => e.valor)) + sobraVales(ym);
   const fixas = somaObj(p.fixas), aportes = somaObj(p.aportes), limites = somaObj(p.limites);
   const gasto = {}, ajuste = {};
   itens.forEach(i => gasto[i.l.categoria] = (gasto[i.l.categoria] || 0) + i.valor);
@@ -937,7 +950,7 @@ function consultor(ym, r) {
   });
   // 6. vale-alimentação
   c.formas.filter(f => f.saldoDe && r.p.rendas[f.saldoDe] != null).forEach(f => {
-    const cred = r.p.rendas[f.saldoDe], saldo = cred - soma(r.itens.filter(i => i.l.forma === f.id).map(i => i.valor));
+    const v = valeInfo(ym, f), cred = v.disponivel, saldo = v.saldo;
     if (saldo > 0 && saldo < cred * 0.2 && diasRest > 7) add('medio', 'mercado', 'Vale-alimentação no fim', `Restam ${fmt(saldo)} para ${dias(diasRest)}. Priorizem o essencial no mercado.`);
     else if (saldo > cred * 0.5 && fr > 0.5) add('info', 'mercado', 'Usem o vale primeiro', `Ainda há ${fmt(saldo)} no ${f.nome}. Paguem mercado e padaria com ele antes do cartão.`);
   });
@@ -1026,9 +1039,9 @@ function vInicio() {
     ${cats.map(linhaCat).join('') || '<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>'}
     ${r.p.fechado ? '' : `<button class="btn sec" style="margin-bottom:10px" data-act="remanejar">${icon('troca', 18, 2)} Remanejar entre categorias</button>`}</section>`;
   c.formas.filter(f => f.saldoDe && r.p.rendas[f.saldoDe] != null).forEach(f => {
-    const cred = r.p.rendas[f.saldoDe], uso = soma(r.itens.filter(i => i.l.forma === f.id).map(i => i.valor)), saldo = cred - uso;
+    const v = valeInfo(ym, f), cred = v.disponivel, uso = v.uso, saldo = v.saldo;
     const st = saldo < 0 ? 'neg' : (cred > 0 && uso / cred >= 0.8 ? 'alerta' : '');
-    h += `<section class="card"><div class="sec-h"><h2>Vale-alimentação</h2><small>crédito ${fmt(cred)}</small></div>
+    h += `<section class="card"><div class="sec-h"><h2>Vale-alimentação</h2><small>${v.sobra ? `crédito ${fmt(v.credito)} + sobra ${fmt(v.sobra)}` : `crédito ${fmt(cred)}`}</small></div>
       <div class="cat-t"><span style="font-weight:500;color:var(--tx3)">Saldo do vale</span><span class="${st}" style="font-size:20px;font-weight:800">${fmt(saldo)}</span></div>
       <span class="pbar" style="margin-top:8px"><i class="${st === 'neg' ? 'estouro' : st}" style="width:${cred > 0 ? Math.min(100, uso / cred * 100).toFixed(1) : 0}%"></i></span></section>`;
   });
@@ -1155,6 +1168,7 @@ function vPlanejar() {
   // rendas
   h += acc('rendas', false, 'Rendas', `${Object.keys(p.rendas).length + p.extras.length} entradas`, fmt(r.renda),
     Object.keys(p.rendas).map(id => { const x = c.rendas.find(y => y.id === id) || {}; return `<div class="pl"><div class="nm">${esc(x.nome || id)}<small>${esc(x.pessoa || '')} · dia ${x.dia || '-'}</small></div>${inMoney('rendas.' + id, p.rendas[id], dis)}</div>`; }).join('')
+    + c.formas.filter(f => f.saldoDe).map(f => { const v = valeInfo(ym, f); return v.sobra ? `<div class="pl"><div class="nm">Sobra do ${esc(f.nome)}<small>automático: saldo que ficou no vale do ciclo anterior</small></div><b>${fmt(v.sobra)}</b></div>` : ''; }).join('')
     + p.extras.map(e => `<div class="pl"><div class="nm">${esc(e.descricao)}<small>renda extra deste ciclo</small></div><b>${fmt(e.valor)}</b>${dis ? '' : `<button class="x" data-act="del-extra" data-id="${esc(e.id)}" aria-label="Remover">✕</button>`}</div>`).join('')
     + (dis ? '' : `<button class="btn sec" data-act="add-extra">${icon('mais', 18, 2.2)} Renda extra (13º, férias, honorários)</button>`));
   // contas fixas
@@ -1259,7 +1273,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 2.0.1</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 2.1</p>`;
   return h;
 }
 
