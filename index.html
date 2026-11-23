@@ -535,7 +535,8 @@ function resumo(ym) {
   if (orfao.length) { const g = soma(orfao.map(id => gasto[id])); cats.push({ id: '_outros', icone: '•', nome: 'Sem categoria no plano', limite: 0, ajuste: 0, efetivo: 0, gasto: g, resta: -g }); }
   const gastoVar = soma(cats.map(k => k.gasto));
   const fixasPagas = Object.keys(p.fixas).filter(id => p.pagos[id]);
-  return { p, renda, fixas, aportes, limites, falta: renda - fixas - limites - aportes, cats, itens, gastoVar, restaVar: limites - gastoVar,
+  const falta = renda - fixas - limites - aportes, furo = (!p.fechado && falta < 0) ? -falta : 0;
+  return { p, renda, fixas, aportes, limites, falta, furo, disponivel: limites - gastoVar - furo, cats, itens, gastoVar, restaVar: limites - gastoVar,
            fixasPagas, valorPago: soma(fixasPagas.map(id => p.fixas[id])) };
 }
 function saldoFundo(f) { return (f.saldoInicial || 0) + soma(D().movimentos.filter(m => m.fundo === f.id).map(m => m.valor)); }
@@ -671,7 +672,7 @@ function consultor(ym, r) {
   const nm = k => `${k.icone} ${k.nome}`;
 
   if (!r.p.fechado && r.falta > 0) add('medio', '🧮', `${fmt(r.falta)} da renda deste ciclo ainda não têm destino. Distribuam em Planejar, de preferência na reserva.`, 'planejar');
-  if (!r.p.fechado && r.falta < 0) add('alto', '🧮', `O planejado passou da renda em ${fmt(-r.falta)}. Reduzam algum limite em Planejar antes de gastar.`, 'planejar');
+  if (!r.p.fechado && r.falta < 0) add('alto', '🧮', `O planejado passou da renda em ${fmt(-r.falta)}. Enquanto isso não for coberto (com renda extra, como o 13º, ou reduzindo limites em Planejar), considerem que só dá para gastar ${fmt(r.disponivel)} nas categorias.`, 'planejar');
 
   if (passado) {
     const sobra = r.renda - r.fixas - r.gastoVar - r.aportes;
@@ -733,7 +734,7 @@ function consultor(ym, r) {
   if (enc && enc.gasto > 0) add('info', '🎈', `A Encantar deve ${fmt(enc.gasto)} à casa neste ciclo. Quando ela reembolsar, registrem como renda extra em Planejar.`);
   // 10. tudo em ordem
   if (!out.some(o => o.nivel === 'alto' || o.nivel === 'medio')) {
-    const porDia = r.restaVar > 0 ? Math.floor(r.restaVar / Math.max(diasRest, 1)) : 0;
+    const porDia = r.disponivel > 0 ? Math.floor(r.disponivel / Math.max(diasRest, 1)) : 0;
     add('ok', '✅', `${nomes}, vocês estão dentro do planejado. Dá para gastar até ${fmt(porDia)} por dia nas categorias até ${fmtD(fim)}.`);
   }
   return out.sort((a, b) => NIVEL[a.nivel] - NIVEL[b.nivel]);
@@ -748,11 +749,12 @@ function vConsultor(ym, r) {
 function vInicio() {
   const ym = S.ciclo, r = resumo(ym), c = cfg(), hoje = hojeISO(), { ini, fim } = cicloRange(ym);
   const dentro = hoje >= ini && hoje <= fim, diasRest = dentro ? diffDias(hoje, fim) + 1 : 0;
-  const porDia = dentro && r.restaVar > 0 ? Math.floor(r.restaVar / diasRest) : null;
+  const porDia = dentro && r.disponivel > 0 ? Math.floor(r.disponivel / diasRest) : null;
   let h = '';
   h += vConsultor(ym, r);
   h += `<section class="card destaque"><div class="rot">Ainda pode gastar nas categorias</div>
-    <div class="grande ${r.restaVar < 0 ? 'neg' : ''}">${fmt(r.restaVar)}</div>
+    <div class="grande ${r.disponivel < 0 ? 'neg' : ''}">${fmt(r.disponivel)}</div>
+    ${r.furo ? `<div class="sub neg">Os limites somam ${fmt(r.limites)}, mas a renda não cobre ${fmt(r.furo)} do planejado. Por isso o disponível já vem descontado.</div>` : ''}
     <div class="sub">gasto ${fmt(r.gastoVar)} de ${fmt(r.limites)}${porDia != null ? ` · cerca de ${fmt(porDia)} por dia nos próximos ${diasRest} dia${diasRest > 1 ? 's' : ''}` : ''}</div>
     ${barra(r.gastoVar, r.limites)}</section>`;
   c.formas.filter(f => f.saldoDe && r.p.rendas[f.saldoDe] != null).forEach(f => { // vales (ex.: VA): saldo do ciclo
@@ -901,7 +903,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.2</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.3</p>`;
   return h;
 }
 
