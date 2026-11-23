@@ -653,6 +653,12 @@ function vInicio() {
     <div class="grande ${r.restaVar < 0 ? 'neg' : ''}">${fmt(r.restaVar)}</div>
     <div class="sub">gasto ${fmt(r.gastoVar)} de ${fmt(r.limites)}${porDia != null ? ` · cerca de ${fmt(porDia)} por dia nos próximos ${diasRest} dia${diasRest > 1 ? 's' : ''}` : ''}</div>
     ${barra(r.gastoVar, r.limites)}</section>`;
+  c.formas.filter(f => f.saldoDe && r.p.rendas[f.saldoDe] != null).forEach(f => { // vales (ex.: VA): saldo do ciclo
+    const cred = r.p.rendas[f.saldoDe], uso = soma(r.itens.filter(i => i.l.forma === f.id).map(i => i.valor)), saldo = cred - uso;
+    h += `<section class="card"><h3>${esc(f.nome)} <small>crédito ${fmt(cred)} no ciclo</small></h3>
+      <div class="cat-top"><span>Saldo do vale</span><b class="${saldo < 0 ? 'neg' : ''}">${fmt(saldo)}</b></div>${barra(uso, cred)}
+      <div class="mini">usado ${fmt(uso)}. Use o vale primeiro no mercado, na padaria e no açougue.</div></section>`;
+  });
   h += `<section class="card"><h3>Categorias <small>toque para ver os gastos</small></h3>${r.cats.map(linhaCat).join('') || '<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>'}
     ${r.p.fechado ? '' : '<button class="btn sec" data-act="remanejar">Remanejar entre categorias</button>'}</section>`;
   const fx = Object.keys(r.p.fixas).map(id => {
