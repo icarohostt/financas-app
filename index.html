@@ -1259,7 +1259,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 2.0</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 2.0.1</p>`;
   return h;
 }
 
@@ -1547,7 +1547,12 @@ if (Sync.store) Sync.puxar(true);
 setInterval(() => { if (document.visibilityState === 'visible' && Sync.store) Sync.puxar(); }, 20000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Sync.store) Sync.puxar(); });
 window.addEventListener('online', () => Sync.store && Sync.sincronizar());
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  // Busca versões novas do app ao abrir e a cada 30 min; quando uma nova assume, recarrega a tela uma vez.
+  const tinhaControle = !!navigator.serviceWorker.controller; let recarregou = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!tinhaControle || recarregou) return; recarregou = true; location.reload(); });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => { reg.update(); setInterval(() => reg.update(), 30 * 60000); }).catch(() => {});
+}
 </script>
 </body>
 </html>
