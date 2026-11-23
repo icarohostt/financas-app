@@ -54,6 +54,9 @@ main{max-width:720px;margin:0 auto;padding:8px 16px 16px}
 .aviso{background:var(--alertabg);color:var(--alerta);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13.5px;cursor:pointer;font-weight:600}
 .aviso.neg{background:var(--negbg)}
 .aviso.ok{background:var(--pri2);color:var(--pri)}
+.fat{padding:8px 0;border-top:1px solid var(--linha)}
+.fat:first-of-type{border-top:0}
+.fat-total{border-top:2px solid var(--linha);padding-top:9px;margin-top:2px}
 .parc{border-top:1px solid var(--linha);padding:4px 0}
 .parc summary{display:flex;justify-content:space-between;gap:8px;padding:8px 0;list-style:none}
 .parc summary::-webkit-details-marker{display:none}
@@ -558,11 +561,16 @@ function resumo(ym) {
            fixasPagas, valorPago: soma(fixasPagas.map(id => p.fixas[id])) };
 }
 function saldoFundo(f) { return (f.saldoInicial || 0) + soma(D().movimentos.filter(m => m.fundo === f.id).map(m => m.valor)); }
-function faturaDoCiclo(ym) {
-  const p = plano(ym);
-  const compras = soma(itensDoCiclo(ym).filter(i => ehCartao(i.l.forma)).map(i => i.valor));
-  const fixas = soma(cfg().fixas.filter(f => f.cartao && p.fixas[f.id] != null).map(f => p.fixas[f.id]));
-  return { compras, fixas, total: compras + fixas };
+function faturaDoCiclo(ym) { // por cartão: compras do ciclo, parcelas anteriores e contas fixas cobradas nele
+  const p = plano(ym), c = cfg(), cartoes = c.formas.filter(f => f.cartao), padrao = (cartoes[0] || {}).id;
+  const porCartao = cartoes.map(k => {
+    const compras = soma(itensDoCiclo(ym).filter(i => i.l.forma === k.id).map(i => i.valor));
+    const anteriores = soma(parcelasAnteriores(ym).filter(x => (x.p.cartao || padrao) === k.id).map(x => x.valor));
+    const fixas = soma(c.fixas.filter(f => f.cartao && !f.auto && (f.forma || padrao) === k.id && p.fixas[f.id] != null).map(f => p.fixas[f.id]));
+    return { id: k.id, nome: k.nome, compras, anteriores, fixas, total: compras + anteriores + fixas };
+  });
+  const t = k => soma(porCartao.map(x => x[k]));
+  return { porCartao, compras: t('compras'), fixas: t('fixas') + t('anteriores'), total: t('total') };
 }
 function comprometidoFuturo(ym, meses) {
   const out = [];
@@ -828,9 +836,10 @@ function vInicio() {
       <div class="meio"><b>${esc(x.f.nome)}${x.f.parcelaTotal ? ` (${numParcelaFixa(x.f, ym)}/${x.f.parcelaTotal})` : ''}</b><small>vence ${fmtD(x.data)}${x.f.cartao ? ' · no cartão' : ''}</small></div>
       <div class="val">${fmt(x.valor)}</div></div>`).join('') || '<div class="vazio">Nenhuma conta fixa cadastrada.</div>'}</div></section>`;
   const fat = faturaDoCiclo(ym), fut = comprometidoFuturo(ym, 6);
-  h += `<section class="card"><h3>Fatura do cartão <small>fecha ${fmtD(fim)} · vence ${fmtD(vencimentoFatura(ym))}</small></h3>
-    <div class="grande" style="font-size:24px">${fmt(fat.total)}</div>
-    <div class="sub">${fmt(fat.compras)} em compras${fat.fixas ? ` + ${fmt(fat.fixas)} de contas fixas no cartão` : ''}</div>
+  const det = x => [x.compras && `compras ${fmt(x.compras)}`, x.anteriores && `parcelas anteriores ${fmt(x.anteriores)}`, x.fixas && `contas fixas ${fmt(x.fixas)}`].filter(Boolean).join(' · ') || 'nada lançado ainda';
+  h += `<section class="card"><h3>Faturas dos cartões <small>fecham ${fmtD(fim)} · vencem ${fmtD(vencimentoFatura(ym))}</small></h3>
+    ${fat.porCartao.map(x => `<div class="fat"><div class="cat-top"><b>💳 ${esc(x.nome)}</b><b>${fmt(x.total)}</b></div><div class="mini">${det(x)}</div></div>`).join('')}
+    <div class="cat-top fat-total"><span>Total dos cartões</span><b>${fmt(fat.total)}</b></div>
     ${fut.length ? `<div class="campo"><label>Parcelas já assumidas para os próximos ciclos</label><div class="linhas">${fut.map(f => `<div class="ln"><div class="meio">${nomeCiclo(f.ciclo)}</div><div class="val">${fmt(f.valor)}</div></div>`).join('')}</div></div>` : ''}
   </section>`;
   h += vParceladas(ym, r);
@@ -965,7 +974,7 @@ function vMetas() {
 /* ----- ajustes ----- */
 const EDS = {
   categorias: { t: 'Categorias (limite padrão por ciclo)', f: [['icone', 'Ícone', 'txt', 'w3'], ['nome', 'Nome', 'txt'], ['limite', 'Limite', 'val'], ['essencial', 'essencial (o consultor não corta)', 'bool']], novo: () => ({ id: uid(), icone: '🏷️', nome: '', limite: 0 }) },
-  fixas: { t: 'Contas fixas', f: [['nome', 'Nome', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3'], ['parcAtual', 'Parcela atual', 'int', 'w3'], ['parcelaTotal', 'de', 'int', 'w3'], ['cartao', 'no cartão', 'bool'], ['opcional', 'assinatura dispensável', 'bool']], novo: () => ({ id: uid(), nome: '', valor: 0, dia: 10, cartao: false }) },
+  fixas: { t: 'Contas fixas', f: [['nome', 'Nome', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3'], ['parcAtual', 'Parcela atual', 'int', 'w3'], ['parcelaTotal', 'de', 'int', 'w3'], ['cartao', 'no cartão', 'bool'], ['forma', 'Qual cartão', 'cartao'], ['opcional', 'assinatura dispensável', 'bool']], novo: () => ({ id: uid(), nome: '', valor: 0, dia: 10, cartao: false }) },
   rendas: { t: 'Rendas', f: [['nome', 'Nome', 'txt'], ['pessoa', 'Pessoa', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3']], novo: () => ({ id: uid(), nome: '', pessoa: eu(), valor: 0, dia: 5 }) },
   fundos: { t: 'Caixinhas (metas)', f: [['icone', 'Ícone', 'txt', 'w3'], ['nome', 'Nome', 'txt'], ['meta', 'Meta', 'val'], ['aporte', 'Aporte mensal', 'val'], ['saldoInicial', 'Saldo inicial', 'val'], ['obs', 'Observação', 'txt']], novo: () => ({ id: uid(), icone: '🎯', nome: '', meta: 0, aporte: 0, saldoInicial: 0 }) },
   formas: { t: 'Formas de pagamento', f: [['nome', 'Nome', 'txt'], ['cartao', 'é cartão de crédito', 'bool']], novo: () => ({ id: uid(), nome: '', cartao: false }) }
@@ -977,6 +986,7 @@ function edLinha(key, o) {
     if (k === 'parcAtual') v = o.parcelaTotal ? numParcelaFixa(o, ymA) : '';
     if (tp === 'bool') return `<label class="bool"><input type="checkbox" data-f="${k}" ${v ? 'checked' : ''}> ${rot}</label>`;
     if (tp === 'val') return `<label>${rot}<input class="money" inputmode="decimal" data-f="${k}" value="${inputValor(v)}"></label>`;
+    if (tp === 'cartao') { const cs = cfg().formas.filter(f => f.cartao); return `<label>${rot}<select data-f="${k}">${cs.map((f, i) => `<option value="${esc(f.id)}" ${(v || (i === 0 ? f.id : '')) === f.id ? 'selected' : ''}>${esc(f.nome)}</option>`).join('')}</select></label>`; }
     if (tp === 'int') return `<label class="${cl || ''}">${rot}<input type="number" inputmode="numeric" data-f="${k}" value="${v == null ? '' : esc(v)}"></label>`;
     return `<label class="${cl || ''}">${rot}<input type="text" data-f="${k}" value="${esc(v)}"></label>`;
   }).join('')}<button class="x" data-act="ed-del" aria-label="Remover">✕</button></div>`;
@@ -1001,7 +1011,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.6</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.7</p>`;
   return h;
 }
 
@@ -1165,6 +1175,7 @@ function lerEditor(box, key) {
       if (tp === 'bool') o[k] = inp.checked;
       else if (tp === 'val') { const v = parseValor(inp.value); o[k] = isNaN(v) ? 0 : v; }
       else if (tp === 'int') o[k] = inp.value === '' ? null : parseInt(inp.value, 10);
+      else if (tp === 'cartao') o[k] = inp.value;
       else o[k] = inp.value.trim();
     });
     if (key === 'fixas') {
