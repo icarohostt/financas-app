@@ -54,6 +54,12 @@ main{max-width:720px;margin:0 auto;padding:8px 16px 16px}
 .aviso{background:var(--alertabg);color:var(--alerta);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13.5px;cursor:pointer;font-weight:600}
 .aviso.neg{background:var(--negbg)}
 .aviso.ok{background:var(--pri2);color:var(--pri)}
+.parc{border-top:1px solid var(--linha);padding:4px 0}
+.parc summary{display:flex;justify-content:space-between;gap:8px;padding:8px 0;list-style:none}
+.parc summary::-webkit-details-marker{display:none}
+.parc summary span:first-child::before{content:'▸ ';color:var(--tx2)}
+.parc[open] summary span:first-child::before{content:'▾ '}
+.parc summary small{font-weight:400;color:var(--tx2)}
 .voltar{border:0;background:none;color:var(--pri);font-weight:600;font-size:14.5px;padding:4px 2px 10px;cursor:pointer}
 .consultor .rec{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:10px;margin-top:7px;font-size:13.5px;line-height:1.35}
 .consultor .rec p{margin:0} .consultor .rec span{font-size:16px;line-height:1.2}
@@ -487,10 +493,21 @@ const nomeForma = id => { const f = formaPorId(id); return f ? f.nome : id || ''
 function numParcelaFixa(f, ym) { return (f.parcelaNum || 1) + ymDiff(ym, f.parcelaRef || ym); }
 function fixaAtiva(f, ym) { if (!f.parcelaTotal) return true; const n = numParcelaFixa(f, ym); return n >= 1 && n <= f.parcelaTotal; }
 
+/* Compras parceladas feitas antes do app: ficam em dados.parcelamentos e alimentam,
+   automaticamente, a conta fixa marcada com auto: "parcelamentos". */
+function parcelasAnteriores(ym) {
+  return ((D() && D().parcelamentos) || []).map(p => {
+    if (p.valores) { const v = p.valores[ym]; return v ? { p, valor: v, k: null, n: null } : null; }
+    const k = (p.parcela || 1) + ymDiff(ym, p.ref); return (k >= 1 && k <= p.total) ? { p, k, n: p.total, valor: p.valor } : null;
+  }).filter(Boolean);
+}
 function planoBase(ym) {
   const c = cfg(), p = { rendas: {}, fixas: {}, limites: {}, aportes: {}, extras: [], pagos: {}, remanejamentos: [], fechado: false };
   c.rendas.forEach(r => p.rendas[r.id] = r.valor || 0);
-  c.fixas.forEach(f => { if (fixaAtiva(f, ym)) p.fixas[f.id] = f.valor || 0; });
+  c.fixas.forEach(f => {
+    if (f.auto === 'parcelamentos') { const v = soma(parcelasAnteriores(ym).map(x => x.valor)); if (v) p.fixas[f.id] = v; }
+    else if (fixaAtiva(f, ym)) p.fixas[f.id] = f.valor || 0;
+  });
   c.categorias.forEach(k => p.limites[k.id] = k.limite || 0);
   c.fundos.forEach(f => p.aportes[f.id] = f.aporte || 0);
   return p;
@@ -503,7 +520,7 @@ function plano(ym) {
   const c = cfg();
   return {
     rendas: Object.assign(b.rendas, filtra(s.rendas, new Set(c.rendas.map(x => x.id)))),
-    fixas: Object.assign(b.fixas, filtra(s.fixas, new Set(Object.keys(b.fixas)))),
+    fixas: Object.assign(b.fixas, filtra(s.fixas, new Set(Object.keys(b.fixas).filter(id => !(c.fixas.find(f => f.id === id) || {}).auto)))),
     limites: Object.assign(b.limites, filtra(s.limites, new Set(c.categorias.map(x => x.id)))),
     aportes: Object.assign(b.aportes, filtra(s.aportes, new Set(c.fundos.map(x => x.id)))),
     extras: s.extras || [], pagos: s.pagos || {}, remanejamentos: s.remanejamentos || [],
@@ -551,7 +568,7 @@ function comprometidoFuturo(ym, meses) {
   const out = [];
   for (let i = 1; i <= meses; i++) {
     const c = ymAdd(ym, i);
-    const v = soma(itensDoCiclo(c).filter(it => it.n > 1 && (it.l.ciclo || cicloDaData(it.l.data)) <= ym).map(it => it.valor));
+    const v = soma(itensDoCiclo(c).filter(it => it.n > 1 && (it.l.ciclo || cicloDaData(it.l.data)) <= ym).map(it => it.valor)) + soma(parcelasAnteriores(c).map(x => x.valor));
     if (v) out.push({ ciclo: c, valor: v });
   }
   return out;
@@ -765,6 +782,24 @@ function vConsultor(ym, r) {
     ${mostrar.map(x => `<div class="rec ${x.nivel}" ${x.act ? `data-act="${x.act === 'remanejar' ? 'remanejar' : 'ir'}" data-v="${x.act}"` : ''}><span>${x.icone}</span><p>${esc(x.texto)}${x.cta ? '<br><u>Quer a minha recomendação? Toque aqui.</u>' : ''}</p></div>`).join('')}
     ${recs.length > max ? `<button class="btn sec peq" data-act="consultor-tudo" style="margin-top:8px">${S.consultorTudo ? 'Mostrar menos' : `Ver mais ${recs.length - max}`}</button>` : ''}</section>`;
 }
+function vParceladas(ym, r) {
+  const grupos = {};
+  const add = (forma, x) => (grupos[forma] = grupos[forma] || []).push(x);
+  parcelasAnteriores(ym).forEach(x => add(x.p.cartao, { desc: x.p.descricao, k: x.k, n: x.n, valor: x.valor,
+    fim: x.n ? ymAdd(ym, x.n - x.k) : null, restante: x.n ? x.valor * (x.n - x.k + 1) : soma(Object.keys(x.p.valores).filter(c => c >= ym).map(c => x.p.valores[c])) }));
+  r.itens.filter(i => i.n > 1).forEach(i => {
+    let rest = 0; for (let j = i.k; j <= i.n; j++) rest += valorParcela(i.l.valor, i.n, j);
+    add(i.l.forma, { desc: i.l.descricao || nomeCat(i.l.categoria), k: i.k, n: i.n, valor: i.valor, fim: ymAdd(ym, i.n - i.k), restante: rest, novo: true });
+  });
+  const formas = Object.keys(grupos); if (!formas.length) return '';
+  const tudo = formas.flatMap(f => grupos[f]);
+  return `<section class="card"><h3>Compras parceladas <small>${fmt(soma(tudo.map(x => x.valor)))} neste ciclo · ${fmt(soma(tudo.map(x => x.restante)))} até acabar</small></h3>
+    ${formas.map(f => { const g = grupos[f].sort((a, b) => b.valor - a.valor);
+      return `<details class="parc"><summary><span>${esc(nomeForma(f))}</span><span>${fmt(soma(g.map(x => x.valor)))} <small>· ${g.length} compra${g.length > 1 ? 's' : ''}</small></span></summary><div class="linhas">
+      ${g.map(x => `<div class="ln"><div class="meio"><b>${esc(x.desc)}</b><small>${x.n ? `parcela ${x.k}/${x.n} · ${x.k === x.n ? 'última parcela' : `termina em ${curtoCiclo(x.fim)} · faltam ${fmt(x.restante)}`}` : 'valor do ciclo, sem detalhe'}${x.novo ? ' · lançada no app' : ''}</small></div><div class="val">${fmt(x.valor)}</div></div>`).join('')}
+      </div></details>`; }).join('')}
+    <p class="dica">Toque em cada cartão para ver as compras. O ciclo mostrado é o da fatura que vence no mês seguinte.</p></section>`;
+}
 function vInicio() {
   const ym = S.ciclo, r = resumo(ym), c = cfg(), hoje = hojeISO(), { ini, fim } = cicloRange(ym);
   const dentro = hoje >= ini && hoje <= fim, diasRest = dentro ? diffDias(hoje, fim) + 1 : 0;
@@ -798,6 +833,7 @@ function vInicio() {
     <div class="sub">${fmt(fat.compras)} em compras${fat.fixas ? ` + ${fmt(fat.fixas)} de contas fixas no cartão` : ''}</div>
     ${fut.length ? `<div class="campo"><label>Parcelas já assumidas para os próximos ciclos</label><div class="linhas">${fut.map(f => `<div class="ln"><div class="meio">${nomeCiclo(f.ciclo)}</div><div class="val">${fmt(f.valor)}</div></div>`).join('')}</div></div>` : ''}
   </section>`;
+  h += vParceladas(ym, r);
   return h;
 }
 function vExtrato() {
@@ -965,7 +1001,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.5</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.6</p>`;
   return h;
 }
 
