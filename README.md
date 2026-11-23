@@ -19,11 +19,11 @@ O ciclo acompanha a fatura do cartão: **do dia 26 ao dia 25**. "Dezembro/2026" 
 | Tela | Para quê |
 |---|---|
 | **Início** | Quanto ainda pode gastar (total e por dia), saldo de cada categoria, checklist das contas fixas, fatura projetada |
-| **+** (botão verde) | Lançar um gasto: valor, categoria, forma de pagamento, parcelas. Avisa antes se o gasto vai estourar a categoria |
+| **+** (botão verde no centro da barra) | Lançar um gasto: valor, categoria, forma de pagamento, parcelas. Avisa antes se o gasto vai estourar a categoria |
 | **Extrato** | Lançamentos do ciclo, com filtro por categoria. Toque para editar ou excluir |
 | **Planejar** | Orçamento do ciclo: rendas, rendas extras (13º, férias), contas fixas, limites e metas. O contador "Falta distribuir" precisa chegar a zero |
 | **Metas** | Caixinhas (reserva, viagem, provisão anual), guardar/retirar e o **fechamento do ciclo** (registra os aportes e manda a sobra para uma caixinha) |
-| **Ajustes** | Quem está usando o aparelho, valores padrão (categorias, contas fixas, rendas, caixinhas, formas de pagamento), exportação para Excel e conexão |
+| **Ajustes** (engrenagem no topo) | Quem está usando o aparelho, valores padrão (categorias, contas fixas, rendas, caixinhas, formas de pagamento), exportação para Excel e conexão |
 
 ## Instalação (uma vez só)
 
