@@ -12,7 +12,7 @@ App de orçamento doméstico do casal. A ideia central: **antes de o ciclo come�
 O ciclo acompanha a fatura do cartão: **do dia 26 ao dia 25**. "Dezembro/2026" vai de 26/11 a 25/12, cuja fatura vence em 01/01.
 
 - Compras parceladas: cada parcela conta no ciclo em que cai na fatura. O painel mostra quanto dos próximos ciclos já está comprometido.
-- Contas fixas e rendas entram no ciclo pela data (ex.: a renda do dia 31 de novembro conta em Dezembro).
+- Rendas e contas fixas seguem o mês do calendário: em "Dezembro/2026" entram o salário de 15/12 e 31/12 e as contas de 10, 15 e 30/12. A fatura que vence em 01/01 é paga com o salário de 31/12.
 
 ## Telas
 

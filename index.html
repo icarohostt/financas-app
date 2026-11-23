@@ -197,10 +197,10 @@ function cicloRange(ym, f) {
   const ini = fimAnt >= diasNoMes(ant) ? `${ym}-01` : `${ant}-${pad(fimAnt + 1)}`;
   return { ini, fim: diaNoMes(ym, f) };
 }
-function dataNoCiclo(ym, dia) { // data em que um evento mensal "dia X" cai dentro do ciclo
-  const { ini, fim } = cicloRange(ym); const c1 = diaNoMes(ymAdd(ym, -1), dia);
-  return (c1 >= ini && c1 <= fim) ? c1 : diaNoMes(ym, dia);
-}
+/* Rendas e contas fixas seguem o mês do calendário que dá nome ao ciclo:
+   em Dezembro/2026 entram o salário de 15/12 e 31/12 e as contas de 10, 15 e 30/12.
+   Só os gastos variáveis (cartão) seguem a janela da fatura (24/11 a 23/12). */
+function dataNoCiclo(ym, dia) { return diaNoMes(ym, dia); }
 function vencimentoFatura(ym) {
   const c = cfg().cartao, v = c.vencimento || 1;
   return v > c.fechamento ? diaNoMes(ym, v) : diaNoMes(ymAdd(ym, 1), v);
@@ -901,7 +901,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.1</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.2</p>`;
   return h;
 }
 
