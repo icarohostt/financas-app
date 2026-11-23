@@ -1,5 +1,5 @@
 // Service worker: deixa o app abrir sem internet. Os dados (API do GitHub) nunca passam por aqui.
-const CACHE = 'financas-v4';
+const CACHE = 'financas-v5';
 const ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
