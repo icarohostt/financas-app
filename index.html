@@ -682,7 +682,7 @@ function mediaHistorica(ym, n) { // média por categoria dos últimos ciclos que
   return { m, n: ciclos.length };
 }
 function consultor(ym, r) {
-  const c = cfg(), out = [], add = (nivel, icone, texto, act) => out.push({ nivel, icone, texto, act });
+  const c = cfg(), out = [], add = (nivel, icone, texto, act, cta) => out.push({ nivel, icone, texto, act, cta });
   const nomes = listaNomes(c.pessoas), hoje = hojeISO(), { ini, fim } = cicloRange(ym);
   const atual = hoje >= ini && hoje <= fim, passado = hoje > fim;
   const diasTot = diffDias(ini, fim) + 1, diasPass = atual ? diffDias(ini, hoje) + 1 : (passado ? diasTot : 0);
@@ -690,8 +690,8 @@ function consultor(ym, r) {
   const cats = r.cats.filter(k => k.id !== '_outros' && k.id !== 'encantar');
   const nm = k => `${k.icone} ${k.nome}`;
 
-  if (!r.p.fechado && r.falta > 0) add('medio', '🧮', `${fmt(r.falta)} da renda deste ciclo ainda não têm destino. Distribuam em Planejar, de preferência na reserva.`, 'planejar');
-  if (!r.p.fechado && r.falta < 0) add('alto', '🧮', `O planejado passou da renda em ${fmt(-r.falta)}. Enquanto isso não for coberto (com renda extra, como o 13º, ou reduzindo limites em Planejar), considerem que só dá para gastar ${fmt(r.disponivel)} nas categorias.`, 'planejar');
+  if (!r.p.fechado && r.falta > 0) add('medio', '🧮', `${fmt(r.falta)} da renda deste ciclo ainda não têm destino. Distribuam em Planejar, de preferência na reserva.`, 'planejar', true);
+  if (!r.p.fechado && r.falta < 0) add('alto', '🧮', `O planejado passou da renda em ${fmt(-r.falta)}. Enquanto isso não for coberto (com renda extra, como o 13º, ou reduzindo limites em Planejar), considerem que só dá para gastar ${fmt(r.disponivel)} nas categorias.`, 'planejar', true);
 
   if (passado) {
     const sobra = r.renda - r.fixas - r.gastoVar - r.aportes;
@@ -762,7 +762,7 @@ function vConsultor(ym, r) {
   const recs = consultor(ym, r); if (!recs.length) return '';
   const max = 4, mostrar = S.consultorTudo ? recs : recs.slice(0, max);
   return `<section class="card consultor"><h3>💬 Seu consultor <small>${recs.length} recomendaç${recs.length > 1 ? 'ões' : 'ão'}</small></h3>
-    ${mostrar.map(x => `<div class="rec ${x.nivel}" ${x.act ? `data-act="${x.act === 'remanejar' ? 'remanejar' : 'ir'}" data-v="${x.act}"` : ''}><span>${x.icone}</span><p>${esc(x.texto)}</p></div>`).join('')}
+    ${mostrar.map(x => `<div class="rec ${x.nivel}" ${x.act ? `data-act="${x.act === 'remanejar' ? 'remanejar' : 'ir'}" data-v="${x.act}"` : ''}><span>${x.icone}</span><p>${esc(x.texto)}${x.cta ? '<br><u>Quer a minha recomendação? Toque aqui.</u>' : ''}</p></div>`).join('')}
     ${recs.length > max ? `<button class="btn sec peq" data-act="consultor-tudo" style="margin-top:8px">${S.consultorTudo ? 'Mostrar menos' : `Ver mais ${recs.length - max}`}</button>` : ''}</section>`;
 }
 function vInicio() {
@@ -814,6 +814,48 @@ function vExtrato() {
   return h;
 }
 function inMoney(path, v, dis) { return `<input class="money" inputmode="decimal" value="${inputValor(v)}" data-chg="plano" data-path="${esc(path)}" ${dis ? 'disabled' : ''}>`; }
+/* ----- recomendação do consultor para fechar o planejamento em zero ----- */
+const DEZ = 1000; // R$ 10,00 em centavos
+function recomendacao(ym, r, semOpcionais) {
+  const c = cfg(), p = r.p, itens = [];
+  const reserva = c.fundos.find(f => f.id === 'reserva') || c.fundos[0];
+  if (r.falta > 0) {
+    if (reserva) itens.push({ tipo: 'aporte', id: reserva.id, para: (p.aportes[reserva.id] || 0) + r.falta, valor: r.falta,
+      texto: `Mandar os ${fmt(r.falta)} sem destino para ${reserva.icone || ''} ${reserva.nome}. Dinheiro sem destino costuma virar gasto.` });
+    return itens;
+  }
+  let falta = -r.falta;
+  if (!semOpcionais) c.fixas.filter(f => f.opcional && (p.fixas[f.id] || 0) > 0).sort((a, b) => p.fixas[b.id] - p.fixas[a.id]).forEach(f => {
+    if (falta <= 0) return;
+    itens.push({ tipo: 'fixa', id: f.id, para: 0, valor: p.fixas[f.id], opcional: true, texto: `Cancelar ${f.nome}: economiza ${fmt(p.fixas[f.id])} sem mudar nenhum hábito.` });
+    falta -= p.fixas[f.id];
+  });
+  const cand = r.cats.filter(k => { const cat = catPorId(k.id); return cat && !cat.essencial && k.limite > 0; }).sort((a, b) => b.limite - a.limite);
+  const cortes = {};
+  for (const teto of [0.16, 0.3]) for (const k of cand) { // primeiro cortes leves; se não bastar, um pouco mais
+    if (falta <= 0) break;
+    const max = Math.floor(k.limite * teto / DEZ) * DEZ - (cortes[k.id] || 0); if (max <= 0) continue;
+    const corte = Math.min(Math.ceil(falta / DEZ) * DEZ, max);
+    cortes[k.id] = (cortes[k.id] || 0) + corte; falta -= corte;
+  }
+  cand.filter(k => cortes[k.id]).forEach(k => itens.push({ tipo: 'limite', id: k.id, para: k.limite - cortes[k.id], valor: cortes[k.id],
+    texto: `${k.icone} ${k.nome}: de ${fmt(k.limite)} para ${fmt(k.limite - cortes[k.id])} (−${fmt(cortes[k.id])}).` }));
+  if (falta < 0 && reserva) itens.push({ tipo: 'aporte', id: reserva.id, para: (p.aportes[reserva.id] || 0) - falta, valor: -falta, texto: `Os ${fmt(-falta)} que sobram do arredondamento vão para ${reserva.nome}.` });
+  if (falta > 0) itens.push({ tipo: 'aviso', valor: falta, texto: `Ainda faltariam ${fmt(falta)}. Para isso, só com renda extra (como o 13º) ou reduzindo as metas.` });
+  return itens;
+}
+function vRecomendacao(ym, r) {
+  const itens = recomendacao(ym, r, S.recSemOpc), temOpc = cfg().fixas.some(f => f.opcional && (r.p.fixas[f.id] || 0) > 0);
+  const protegidas = cfg().categorias.filter(k => k.essencial).map(k => k.nome.toLowerCase());
+  const intro = r.falta > 0 ? `Sobraram ${fmt(r.falta)} sem destino neste ciclo. Minha recomendação:`
+    : `Para cobrir os ${fmt(-r.falta)} que passaram da renda sem mexer nas categorias essenciais, eu faria assim:`;
+  return `<section class="card consultor" id="rec-card"><h3>💬 Recomendação do consultor</h3><p class="sub" style="margin:0 0 4px">${esc(intro)}</p>
+    ${itens.map(x => `<div class="rec ${x.tipo === 'aviso' ? 'medio' : 'info'}"><span>${x.tipo === 'fixa' ? '✂️' : x.tipo === 'aporte' ? '🛟' : x.tipo === 'aviso' ? '⚠️' : '➖'}</span><p>${esc(x.texto)}</p></div>`).join('')}
+    ${r.falta < 0 && temOpc ? `<label class="dica" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-act="rec-opc" ${S.recSemOpc ? '' : 'checked'}> Vamos cancelar as assinaturas sugeridas</label>` : ''}
+    ${r.falta < 0 ? '<p class="dica">Não cortei mercado, transporte, farmácia nem imprevistos: num mês apertado, o imprevisto é o que evita recorrer ao crédito.</p>' : ''}
+    <button class="btn" data-act="rec-aplicar">Aplicar recomendação</button>
+    <p class="dica">Vale só para este ciclo. Depois de aplicar, dá para ajustar qualquer valor abaixo.</p></section>`;
+}
 function vPlanejar() {
   const ym = S.ciclo, r = resumo(ym), p = r.p, c = cfg(), dis = p.fechado;
   let h = `<section class="card resumo"><div class="eq">
@@ -824,6 +866,7 @@ function vPlanejar() {
     <span class="t">${r.falta >= 0 ? 'Falta distribuir' : 'Passou da renda'}</span><span class="t ${r.falta < 0 ? 'neg' : ''}" style="${r.falta === 0 ? 'color:var(--ok)' : ''}">${fmt(Math.abs(r.falta))}${r.falta === 0 ? ' ✓' : ''}</span>
   </div></section>`;
   if (dis) h += `<div class="aviso ok">Este ciclo está fechado. Para alterar, reabra em Metas.</div>`;
+  else if (r.falta !== 0) h += vRecomendacao(ym, r);
   h += `<section class="card"><h3>Rendas</h3><div>
     ${Object.keys(p.rendas).map(id => { const x = c.rendas.find(y => y.id === id) || {}; return `<div class="pl"><div class="nm">${esc(x.nome || id)}<small>${esc(x.pessoa || '')} · dia ${x.dia || '-'}</small></div>${inMoney('rendas.' + id, p.rendas[id], dis)}</div>`; }).join('')}
     ${p.extras.map(e => `<div class="pl"><div class="nm">${esc(e.descricao)}<small>renda extra deste ciclo</small></div><b>${fmt(e.valor)}</b>${dis ? '' : `<button class="x" data-act="del-extra" data-id="${esc(e.id)}" aria-label="Remover">✕</button>`}</div>`).join('')}
@@ -885,8 +928,8 @@ function vMetas() {
 
 /* ----- ajustes ----- */
 const EDS = {
-  categorias: { t: 'Categorias (limite padrão por ciclo)', f: [['icone', 'Ícone', 'txt', 'w3'], ['nome', 'Nome', 'txt'], ['limite', 'Limite', 'val']], novo: () => ({ id: uid(), icone: '🏷️', nome: '', limite: 0 }) },
-  fixas: { t: 'Contas fixas', f: [['nome', 'Nome', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3'], ['parcAtual', 'Parcela atual', 'int', 'w3'], ['parcelaTotal', 'de', 'int', 'w3'], ['cartao', 'no cartão', 'bool']], novo: () => ({ id: uid(), nome: '', valor: 0, dia: 10, cartao: false }) },
+  categorias: { t: 'Categorias (limite padrão por ciclo)', f: [['icone', 'Ícone', 'txt', 'w3'], ['nome', 'Nome', 'txt'], ['limite', 'Limite', 'val'], ['essencial', 'essencial (o consultor não corta)', 'bool']], novo: () => ({ id: uid(), icone: '🏷️', nome: '', limite: 0 }) },
+  fixas: { t: 'Contas fixas', f: [['nome', 'Nome', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3'], ['parcAtual', 'Parcela atual', 'int', 'w3'], ['parcelaTotal', 'de', 'int', 'w3'], ['cartao', 'no cartão', 'bool'], ['opcional', 'assinatura dispensável', 'bool']], novo: () => ({ id: uid(), nome: '', valor: 0, dia: 10, cartao: false }) },
   rendas: { t: 'Rendas', f: [['nome', 'Nome', 'txt'], ['pessoa', 'Pessoa', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3']], novo: () => ({ id: uid(), nome: '', pessoa: eu(), valor: 0, dia: 5 }) },
   fundos: { t: 'Caixinhas (metas)', f: [['icone', 'Ícone', 'txt', 'w3'], ['nome', 'Nome', 'txt'], ['meta', 'Meta', 'val'], ['aporte', 'Aporte mensal', 'val'], ['saldoInicial', 'Saldo inicial', 'val'], ['obs', 'Observação', 'txt']], novo: () => ({ id: uid(), icone: '🎯', nome: '', meta: 0, aporte: 0, saldoInicial: 0 }) },
   formas: { t: 'Formas de pagamento', f: [['nome', 'Nome', 'txt'], ['cartao', 'é cartão de crédito', 'bool']], novo: () => ({ id: uid(), nome: '', cartao: false }) }
@@ -922,7 +965,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.4</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.5</p>`;
   return h;
 }
 
@@ -1107,6 +1150,19 @@ const ACT = {
   filtrar: el => { if (S.view === 'extrato') { S.filtroCat = el.dataset.id || null; render(); } else navegar('extrato', el.dataset.id || null, false); },
   pagar: el => { const id = el.dataset.id, p = plano(S.ciclo); Sync.enfileirar({ t: 'plano.set', ciclo: S.ciclo, path: ['pagos', id], v: p.pagos[id] ? null : true }); },
   remanejar: () => abrirRemanejar(),
+  'rec-opc': () => { S.recSemOpc = !S.recSemOpc; render(); },
+  'rec-aplicar': () => {
+    const ym = S.ciclo, itens = recomendacao(ym, resumo(ym), S.recSemOpc), ops = [];
+    itens.forEach(x => {
+      if (x.tipo === 'limite') ops.push({ t: 'plano.set', ciclo: ym, path: ['limites', x.id], v: x.para });
+      if (x.tipo === 'fixa') ops.push({ t: 'plano.set', ciclo: ym, path: ['fixas', x.id], v: 0 });
+      if (x.tipo === 'aporte') ops.push({ t: 'plano.set', ciclo: ym, path: ['aportes', x.id], v: x.para });
+    });
+    if (!ops.length) return;
+    Sync.enfileirar(ops);
+    const canc = itens.filter(x => x.tipo === 'fixa').map(x => (cfg().fixas.find(f => f.id === x.id) || {}).nome);
+    toast(`Recomendação aplicada.${canc.length ? ` Lembrem de cancelar: ${canc.join(', ')}. Depois de cancelar, removam em Ajustes → Contas fixas.` : ''}`, 6000);
+  },
   'consultor-tudo': () => { S.consultorTudo = !S.consultorTudo; render(); },
   'del-reman': el => Sync.enfileirar({ t: 'plano.pull', ciclo: S.ciclo, campo: 'remanejamentos', id: el.dataset.id }),
   'add-extra': () => abrirExtra(),
