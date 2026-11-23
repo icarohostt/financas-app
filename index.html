@@ -54,6 +54,13 @@ main{max-width:720px;margin:0 auto;padding:8px 16px 16px}
 .aviso{background:var(--alertabg);color:var(--alerta);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13.5px;cursor:pointer;font-weight:600}
 .aviso.neg{background:var(--negbg)}
 .aviso.ok{background:var(--pri2);color:var(--pri)}
+.consultor .rec{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:10px;margin-top:7px;font-size:13.5px;line-height:1.35}
+.consultor .rec p{margin:0} .consultor .rec span{font-size:16px;line-height:1.2}
+.consultor .rec.alto{background:var(--negbg);color:var(--neg);font-weight:600}
+.consultor .rec.medio{background:var(--alertabg);color:var(--alerta);font-weight:600}
+.consultor .rec.info{background:var(--bg)}
+.consultor .rec.ok{background:var(--pri2);color:var(--pri);font-weight:600}
+.consultor .rec[data-act]{cursor:pointer}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;padding:11px 16px;background:var(--pri);color:#fff;font-weight:600;cursor:pointer;width:100%;margin-top:10px}
 @media (prefers-color-scheme:dark){.btn{color:#04201d}}
 .btn.sec{background:var(--pri2);color:var(--pri)}
@@ -643,12 +650,107 @@ function linhaCat(k) {
     ${barra(k.gasto, k.efetivo)}
     <div class="mini">${fmt(k.gasto)} de ${fmt(k.efetivo)}${k.ajuste ? ` · remanejado ${k.ajuste > 0 ? '+' : '−'}${fmt(Math.abs(k.ajuste))}` : ''}</div></div>`;
 }
+/* ----- consultor: recomendações calculadas a partir do plano, do ritmo e do histórico ----- */
+const NIVEL = { alto: 0, medio: 1, info: 2, ok: 3 };
+function listaNomes(a) { return a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1]; }
+function mediaHistorica(ym, n) { // média por categoria dos últimos ciclos que tiveram lançamentos
+  const ciclos = [];
+  for (let i = 1; i <= 12 && ciclos.length < n; i++) { const c = ymAdd(ym, -i); if (itensDoCiclo(c).length) ciclos.push(c); }
+  if (!ciclos.length) return null;
+  const m = {};
+  ciclos.forEach(c => itensDoCiclo(c).forEach(it => m[it.l.categoria] = (m[it.l.categoria] || 0) + it.valor / ciclos.length));
+  return { m, n: ciclos.length };
+}
+function consultor(ym, r) {
+  const c = cfg(), out = [], add = (nivel, icone, texto, act) => out.push({ nivel, icone, texto, act });
+  const nomes = listaNomes(c.pessoas), hoje = hojeISO(), { ini, fim } = cicloRange(ym);
+  const atual = hoje >= ini && hoje <= fim, passado = hoje > fim;
+  const diasTot = diffDias(ini, fim) + 1, diasPass = atual ? diffDias(ini, hoje) + 1 : (passado ? diasTot : 0);
+  const fr = diasPass / diasTot, diasRest = diasTot - diasPass + (atual ? 1 : 0);
+  const cats = r.cats.filter(k => k.id !== '_outros' && k.id !== 'encantar');
+  const nm = k => `${k.icone} ${k.nome}`;
+
+  if (!r.p.fechado && r.falta > 0) add('medio', '🧮', `${fmt(r.falta)} da renda deste ciclo ainda não têm destino. Distribuam em Planejar, de preferência na reserva.`, 'planejar');
+  if (!r.p.fechado && r.falta < 0) add('alto', '🧮', `O planejado passou da renda em ${fmt(-r.falta)}. Reduzam algum limite em Planejar antes de gastar.`, 'planejar');
+
+  if (passado) {
+    const sobra = r.renda - r.fixas - r.gastoVar - r.aportes;
+    add(sobra >= 0 ? 'ok' : 'alto', sobra >= 0 ? '✅' : '📉', r.p.fechado ? `Ciclo fechado.` : `Este ciclo já terminou ${sobra >= 0 ? `com sobra de ${fmt(sobra)}` : `com estouro de ${fmt(-sobra)}`}. Fechem o ciclo em Metas para registrar os aportes.`, r.p.fechado ? null : 'metas');
+    return out;
+  }
+  if (!atual) { // ciclo futuro
+    const comp = soma(r.itens.map(i => i.valor));
+    if (comp) add('info', '🗓️', `Já há ${fmt(comp)} em parcelas caindo neste ciclo. Isso já está descontado das categorias.`);
+    if (!out.length) add('ok', '✅', `Planejamento do ciclo completo.`);
+    return out;
+  }
+
+  // 1. categorias estouradas
+  const sobrando = cats.filter(k => k.resta > 0).sort((a, b) => b.resta - a.resta)[0];
+  cats.filter(k => k.resta < 0).forEach(k => add('alto', '🚫', `${nomes}, vocês não podem gastar mais em ${nm(k)}: já passou ${fmt(-k.resta)} do limite.${sobrando ? ` Se for inevitável, remanejem de ${sobrando.nome} (sobram ${fmt(sobrando.resta)}).` : ''}`, 'remanejar'));
+  // 2. quase esgotadas
+  cats.filter(k => k.resta >= 0 && k.efetivo > 0 && k.gasto / k.efetivo >= 0.85).forEach(k =>
+    add('alto', '⛔', `Recomendo que vocês não gastem mais em ${nm(k)} até ${fmtD(fim)}: restam só ${fmt(k.resta)} para ${diasRest} dia${diasRest > 1 ? 's' : ''}.`));
+  // 3. ritmo acima do esperado → projeção de estouro
+  if (fr >= 0.15) cats.forEach(k => {
+    if (k.resta < 0 || k.efetivo <= 0 || k.gasto / k.efetivo >= 0.85) return;
+    const proj = k.gasto / fr;
+    if (k.gasto / k.efetivo > fr + 0.15 && proj > k.efetivo * 1.05)
+      add('medio', '📈', `${nm(k)} está rápido demais: ${Math.round(k.gasto / k.efetivo * 100)}% do limite gasto com ${Math.round(fr * 100)}% do ciclo. Nesse ritmo, termina em ${fmt(proj)} (limite ${fmt(k.efetivo)}). Segurem em até ${fmt(Math.floor(k.resta / Math.max(diasRest, 1)))} por dia.`);
+  });
+  // 4. acima do normal (histórico dos ciclos anteriores)
+  const hist = mediaHistorica(ym, 3);
+  if (hist && fr >= 0.25) cats.forEach(k => {
+    const med = hist.m[k.id] || 0, proj = k.gasto / fr;
+    if (med >= 3000 && k.gasto >= 3000 && proj > med * 1.25 && !out.some(o => o.texto.includes(k.nome)))
+      add('medio', '⚠️', `${nm(k)} está ficando acima do normal: a média ${hist.n > 1 ? `dos últimos ${hist.n} ciclos` : 'do ciclo anterior'} é ${fmt(med)}, e este ciclo caminha para ${fmt(proj)}.`);
+  });
+  // 5. aumento recente (últimos 7 dias)
+  const d7 = new Date(+hoje.slice(0, 4), +hoje.slice(5, 7) - 1, +hoje.slice(8, 10) - 6);
+  const desde = `${d7.getFullYear()}-${pad(d7.getMonth() + 1)}-${pad(d7.getDate())}`;
+  if (diasPass >= 10) cats.forEach(k => {
+    const sem = soma(r.itens.filter(i => i.l.categoria === k.id && i.k === 1 && i.l.data >= desde && i.l.data <= hoje).map(i => i.valor));
+    const mediaSem = (k.gasto - sem) / Math.max(diasPass - 7, 1) * 7;
+    if (sem >= 5000 && sem > mediaSem * 1.6 && !out.some(o => o.texto.includes(k.nome)))
+      add('medio', '🔺', `Os gastos com ${nm(k)} aumentaram: ${fmt(sem)} nos últimos 7 dias, contra uma média de ${fmt(mediaSem)} por semana antes.`);
+  });
+  // 6. vale-alimentação
+  c.formas.filter(f => f.saldoDe && r.p.rendas[f.saldoDe] != null).forEach(f => {
+    const cred = r.p.rendas[f.saldoDe], saldo = cred - soma(r.itens.filter(i => i.l.forma === f.id).map(i => i.valor));
+    if (saldo > 0 && saldo < cred * 0.2 && diasRest > 7) add('medio', '🛒', `O ${f.nome} está no fim (${fmt(saldo)}) e faltam ${diasRest} dias. Priorizem o essencial no mercado.`);
+    else if (saldo > cred * 0.5 && fr > 0.5) add('info', '🛒', `Ainda há ${fmt(saldo)} no ${f.nome}. Usem o vale antes do cartão no mercado e na padaria.`);
+  });
+  // 7. contas fixas vencendo em até 3 dias
+  const venc = Object.keys(r.p.fixas).filter(id => !r.p.pagos[id] && r.p.fixas[id] > 0).map(id => ({ f: c.fixas.find(x => x.id === id) || { nome: id, dia: 1 }, id }))
+    .map(x => Object.assign(x, { data: dataNoCiclo(ym, x.f.dia || 1) })).filter(x => x.data >= hoje && diffDias(hoje, x.data) <= 3 && !x.f.cartao);
+  if (venc.length) add('info', '📅', `Vencem até ${fmtD(venc.map(x => x.data).sort().pop())}: ${venc.map(x => x.f.nome).join(', ')} (${fmt(soma(venc.map(x => r.p.fixas[x.id])))}).`);
+  // 8. parcelamentos novos
+  const novasParc = r.itens.filter(i => i.n > 1 && i.k === 1);
+  const futuro = soma(comprometidoFuturo(ym, 12).map(x => x.valor));
+  if (novasParc.length) add('medio', '💳', `${novasParc.length === 1 ? 'Uma compra parcelada' : novasParc.length + ' compras parceladas'} neste ciclo. Os próximos ciclos já começam com ${fmt(futuro)} comprometidos. Evitem parcelar até as parcelas atuais acabarem.`);
+  // 9. Encantar
+  const enc = r.cats.find(k => k.id === 'encantar');
+  if (enc && enc.gasto > 0) add('info', '🎈', `A Encantar deve ${fmt(enc.gasto)} à casa neste ciclo. Quando ela reembolsar, registrem como renda extra em Planejar.`);
+  // 10. tudo em ordem
+  if (!out.some(o => o.nivel === 'alto' || o.nivel === 'medio')) {
+    const porDia = r.restaVar > 0 ? Math.floor(r.restaVar / Math.max(diasRest, 1)) : 0;
+    add('ok', '✅', `${nomes}, vocês estão dentro do planejado. Dá para gastar até ${fmt(porDia)} por dia nas categorias até ${fmtD(fim)}.`);
+  }
+  return out.sort((a, b) => NIVEL[a.nivel] - NIVEL[b.nivel]);
+}
+function vConsultor(ym, r) {
+  const recs = consultor(ym, r); if (!recs.length) return '';
+  const max = 4, mostrar = S.consultorTudo ? recs : recs.slice(0, max);
+  return `<section class="card consultor"><h3>💬 Seu consultor <small>${recs.length} recomendaç${recs.length > 1 ? 'ões' : 'ão'}</small></h3>
+    ${mostrar.map(x => `<div class="rec ${x.nivel}" ${x.act ? `data-act="${x.act === 'remanejar' ? 'remanejar' : 'ir'}" data-v="${x.act}"` : ''}><span>${x.icone}</span><p>${esc(x.texto)}</p></div>`).join('')}
+    ${recs.length > max ? `<button class="btn sec peq" data-act="consultor-tudo" style="margin-top:8px">${S.consultorTudo ? 'Mostrar menos' : `Ver mais ${recs.length - max}`}</button>` : ''}</section>`;
+}
 function vInicio() {
   const ym = S.ciclo, r = resumo(ym), c = cfg(), hoje = hojeISO(), { ini, fim } = cicloRange(ym);
   const dentro = hoje >= ini && hoje <= fim, diasRest = dentro ? diffDias(hoje, fim) + 1 : 0;
   const porDia = dentro && r.restaVar > 0 ? Math.floor(r.restaVar / diasRest) : null;
   let h = '';
-  if (r.falta !== 0 && !r.p.fechado) h += `<div class="aviso ${r.falta < 0 ? 'neg' : ''}" data-act="ir" data-v="planejar">${r.falta > 0 ? `Falta distribuir ${fmt(r.falta)} da renda deste ciclo` : `O planejado passou da renda em ${fmt(-r.falta)}`} — toque para ajustar</div>`;
+  h += vConsultor(ym, r);
   h += `<section class="card destaque"><div class="rot">Ainda pode gastar nas categorias</div>
     <div class="grande ${r.restaVar < 0 ? 'neg' : ''}">${fmt(r.restaVar)}</div>
     <div class="sub">gasto ${fmt(r.gastoVar)} de ${fmt(r.limites)}${porDia != null ? ` · cerca de ${fmt(porDia)} por dia nos próximos ${diasRest} dia${diasRest > 1 ? 's' : ''}` : ''}</div>
@@ -799,7 +901,7 @@ function vAjustes() {
   }
   if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
   else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
-  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.0</p>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.1</p>`;
   return h;
 }
 
@@ -983,6 +1085,7 @@ const ACT = {
   filtrar: el => { S.filtroCat = el.dataset.id || null; S.view = 'extrato'; render(); },
   pagar: el => { const id = el.dataset.id, p = plano(S.ciclo); Sync.enfileirar({ t: 'plano.set', ciclo: S.ciclo, path: ['pagos', id], v: p.pagos[id] ? null : true }); },
   remanejar: () => abrirRemanejar(),
+  'consultor-tudo': () => { S.consultorTudo = !S.consultorTudo; render(); },
   'del-reman': el => Sync.enfileirar({ t: 'plano.pull', ciclo: S.ciclo, campo: 'remanejamentos', id: el.dataset.id }),
   'add-extra': () => abrirExtra(),
   'del-extra': el => Sync.enfileirar({ t: 'plano.pull', ciclo: S.ciclo, campo: 'extras', id: el.dataset.id }),
