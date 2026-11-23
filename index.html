@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Finanças">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>Finanças da Casa</title>
+<style>
+:root{
+  --bg:#f4f6f5; --card:#fff; --tx:#1c2321; --tx2:#5d6b67; --linha:#e3e8e6;
+  --pri:#0f766e; --pri2:#e6f3f1; --ok:#16a34a; --alerta:#d97706; --neg:#dc2626; --negbg:#fdecec; --alertabg:#fff6e6;
+  --raio:14px; --sombra:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1413; --card:#182120; --tx:#e7eeec; --tx2:#9aaba6; --linha:#26312f; --pri:#2dd4bf; --pri2:#123532;
+        --negbg:#3a1717; --alertabg:#3a2a10; --sombra:none}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,select{font:inherit;color:inherit}
+#topo{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 16px 6px;max-width:720px;margin:0 auto}
+.topo1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.topo1 h1{font-size:18px;margin:0}
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);background:none;border:0;padding:4px 6px;border-radius:8px;cursor:pointer}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok)}
+.dot.sync,.dot.pend{background:var(--alerta)} .dot.erro,.dot.offline{background:var(--neg)} .dot.vazio{background:var(--tx2)}
+.ciclo{display:flex;align-items:center;justify-content:space-between;margin-top:8px;background:var(--card);border-radius:12px;box-shadow:var(--sombra);padding:4px}
+.ciclo button{border:0;background:none;font-size:22px;width:44px;height:38px;border-radius:10px;cursor:pointer;color:var(--pri)}
+.ciclo .nome{text-align:center;line-height:1.15}
+.ciclo .nome b{display:block;font-size:15px} .ciclo .nome small{color:var(--tx2);font-size:12px}
+main{max-width:720px;margin:0 auto;padding:8px 16px 16px}
+.card{background:var(--card);border-radius:var(--raio);box-shadow:var(--sombra);padding:14px 16px;margin:0 0 12px}
+.card h3{margin:0 0 10px;font-size:15px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h3 small{font-weight:400;color:var(--tx2);font-size:12px}
+.destaque .rot{color:var(--tx2);font-size:13px}
+.grande{font-size:30px;font-weight:700;letter-spacing:-.5px;margin:2px 0}
+.sub,.mini{color:var(--tx2);font-size:12.5px}
+.neg{color:var(--neg)!important}
+.barra{height:8px;border-radius:5px;background:var(--linha);overflow:hidden;margin:6px 0 2px}
+.barra i{display:block;height:100%;background:var(--ok);border-radius:5px}
+.barra i.alerta{background:var(--alerta)} .barra i.estouro{background:var(--neg)}
+.cat{padding:9px 0;border-top:1px solid var(--linha);cursor:pointer}
+.cat:first-of-type{border-top:0}
+.cat-top{display:flex;justify-content:space-between;gap:8px;font-size:14.5px}
+.cat-top span:last-child{font-size:13px;color:var(--tx2);white-space:nowrap}
+.aviso{background:var(--alertabg);color:var(--alerta);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13.5px;cursor:pointer;font-weight:600}
+.aviso.neg{background:var(--negbg)}
+.aviso.ok{background:var(--pri2);color:var(--pri)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;padding:11px 16px;background:var(--pri);color:#fff;font-weight:600;cursor:pointer;width:100%;margin-top:10px}
+@media (prefers-color-scheme:dark){.btn{color:#04201d}}
+.btn.sec{background:var(--pri2);color:var(--pri)}
+.btn.perigo{background:var(--negbg);color:var(--neg)}
+.btn.peq{width:auto;padding:7px 12px;margin-top:0;font-size:13px}
+.linhas .ln{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--linha)}
+.linhas .ln:first-child{border-top:0}
+.ln .meio{flex:1;min-width:0}
+.ln .meio b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ln .meio small{color:var(--tx2);font-size:12px}
+.ln .val{font-weight:600;white-space:nowrap}
+.ln .ic{width:34px;height:34px;border-radius:10px;background:var(--pri2);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.ln.click{cursor:pointer}
+.pago .meio b,.pago .val{color:var(--tx2);text-decoration:line-through}
+.chk{width:26px;height:26px;border-radius:8px;border:2px solid var(--linha);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;font-size:15px;color:#fff}
+.chk.on{background:var(--ok);border-color:var(--ok)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1.5px solid var(--linha);background:var(--card);border-radius:20px;padding:6px 11px;font-size:13.5px;cursor:pointer;line-height:1.2;text-align:left}
+.chip small{display:block;font-size:11px;color:var(--tx2)}
+.chip.on{border-color:var(--pri);background:var(--pri2);color:var(--pri);font-weight:600}
+.chip.on small{color:var(--pri)}
+.rolar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
+.rolar .chip{white-space:nowrap;flex:none}
+.campo{margin:12px 0 0}
+.campo>label{display:block;font-size:12.5px;color:var(--tx2);margin-bottom:5px;font-weight:600}
+input:not([type]),input[type=text],input[type=date],input[type=number],input[type=password],input.money,select{width:100%;padding:10px 12px;border:1.5px solid var(--linha);border-radius:10px;background:var(--card)}
+input:focus,select:focus{outline:none;border-color:var(--pri)}
+input:disabled{opacity:.6}
+input.grande-in{font-size:28px;font-weight:700;padding:10px 12px}
+.pl{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--linha)}
+.pl:first-child{border-top:0}
+.pl .nm{flex:1;min-width:0;font-size:14px}
+.pl .nm small{display:block;color:var(--tx2);font-size:11.5px}
+.pl input.money{width:122px;text-align:right;padding:8px 10px}
+.x{border:0;background:none;color:var(--tx2);font-size:18px;cursor:pointer;padding:4px 6px}
+.resumo{position:sticky;top:calc(98px + env(safe-area-inset-top));z-index:4}
+.eq{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:13.5px}
+.eq .t{font-weight:700;border-top:1px solid var(--linha);padding-top:5px;margin-top:3px}
+#abas{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--linha);display:flex;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+#abas button{border:0;background:none;display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--tx2);gap:1px;padding:4px 8px;cursor:pointer;min-width:58px}
+#abas button span{font-size:20px;filter:grayscale(1);opacity:.7}
+#abas button.on{color:var(--pri);font-weight:700}
+#abas button.on span{filter:none;opacity:1}
+#fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:7;width:58px;height:58px;border-radius:50%;border:0;background:var(--pri);color:#fff;font-size:32px;line-height:1;box-shadow:0 6px 18px rgba(15,118,110,.4);cursor:pointer}
+@media (prefers-color-scheme:dark){#fab{color:#04201d}}
+#fab[hidden]{display:none}
+.sheet-wrap{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center}
+.sheet-wrap[hidden]{display:none}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.sheet-h h2{font-size:17px;margin:0}
+.alertinha{margin-top:10px;padding:9px 12px;border-radius:10px;font-size:13px;background:var(--alertabg);color:var(--alerta);font-weight:600}
+.alertinha.neg{background:var(--negbg);color:var(--neg)}
+.alertinha:empty{display:none}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));z-index:30;background:#1c2321;color:#fff;padding:10px 16px;border-radius:12px;font-size:13.5px;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#toast[hidden]{display:none}
+.vazio{color:var(--tx2);text-align:center;padding:18px 0;font-size:14px}
+.ed-row{border:1px solid var(--linha);border-radius:12px;padding:8px 10px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;position:relative}
+.ed-row label{font-size:11px;color:var(--tx2);display:flex;flex-direction:column;gap:3px;flex:1 1 140px}
+.ed-row label.w3{flex:0 0 70px}
+.ed-row label.bool{flex:0 0 auto;flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--tx);padding-bottom:10px}
+.ed-row input{padding:8px 9px}
+.ed-row .x{position:absolute;top:2px;right:2px}
+.prog{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--tx2)}
+.prog span:last-child{text-align:right}
+.boas{text-align:center;padding:24px 8px 8px}
+.boas h2{margin:6px 0}
+details summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+.dica{font-size:12.5px;color:var(--tx2);margin-top:8px}
+code{background:var(--pri2);padding:1px 5px;border-radius:5px;font-size:12.5px}
+</style>
+</head>
+<body>
+<header id="topo"></header>
+<main id="main"></main>
+<nav id="abas"></nav>
+<button id="fab" data-act="lancar" aria-label="Novo lançamento" hidden>+</button>
+<div id="sheet" class="sheet-wrap" hidden></div>
+<div id="toast" hidden></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Finanças da Casa — orçamento base zero por categoria, ciclo da fatura.
+   Dados: um arquivo JSON (financas.json) num repositório privado do
+   GitHub, lido e gravado pela API com um token de acesso.
+   Valores monetários em CENTAVOS (inteiros).
+   ===================================================================== */
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const soma = arr => arr.reduce((a, b) => a + (b || 0), 0);
+const somaObj = o => soma(Object.values(o || {}));
+const fmt = c => ((c || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const inputValor = c => ((c || 0) / 100).toFixed(2).replace('.', ',');
+function parseValor(s) {
+  s = String(s == null ? '' : s).replace(/[R$\s]/g, '');
+  if (!s) return NaN;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = Number(s);
+  return isFinite(n) ? Math.round(n * 100) : NaN;
+}
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MES3 = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const pad = n => String(n).padStart(2, '0');
+function hojeISO() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function ymAdd(ym, n) { let [y, m] = ym.split('-').map(Number); m += n; y += Math.floor((m - 1) / 12); m = ((m - 1) % 12 + 12) % 12 + 1; return `${y}-${pad(m)}`; }
+function ymDiff(a, b) { const [ya, ma] = a.split('-').map(Number), [yb, mb] = b.split('-').map(Number); return (ya - yb) * 12 + (ma - mb); }
+function diasNoMes(ym) { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).getDate(); }
+function diaNoMes(ym, dia) { return `${ym}-${pad(Math.min(dia, diasNoMes(ym)))}`; }
+function diffDias(a, b) { const p = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)); return Math.round((p(b) - p(a)) / 864e5); }
+const fmtD = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+function nomeCiclo(ym) { const [y, m] = ym.split('-').map(Number); return `${MESES[m - 1]}/${y}`; }
+function curtoCiclo(ym) { const [y, m] = ym.split('-').map(Number); return `${MES3[m - 1]}/${String(y).slice(2)}`; }
+
+/* ---------- ciclo da fatura ----------
+   O ciclo "AAAA-MM" vai do dia seguinte ao fechamento do mês anterior até o
+   dia do fechamento no mês MM. Ex.: fechamento 25 → Dezembro/2026 = 26/11 a 25/12. */
+function fech() { return (cfg() && cfg().cartao && cfg().cartao.fechamento) || 25; }
+function cicloDaData(iso, f) {
+  f = f || fech(); const ym = iso.slice(0, 7), d = +iso.slice(8, 10);
+  return d <= Math.min(f, diasNoMes(ym)) ? ym : ymAdd(ym, 1);
+}
+function cicloRange(ym, f) {
+  f = f || fech(); const ant = ymAdd(ym, -1); const fimAnt = Math.min(f, diasNoMes(ant));
+  const ini = fimAnt >= diasNoMes(ant) ? `${ym}-01` : `${ant}-${pad(fimAnt + 1)}`;
+  return { ini, fim: diaNoMes(ym, f) };
+}
+function dataNoCiclo(ym, dia) { // data em que um evento mensal "dia X" cai dentro do ciclo
+  const { ini, fim } = cicloRange(ym); const c1 = diaNoMes(ymAdd(ym, -1), dia);
+  return (c1 >= ini && c1 <= fim) ? c1 : diaNoMes(ym, dia);
+}
+function vencimentoFatura(ym) {
+  const c = cfg().cartao, v = c.vencimento || 1;
+  return v > c.fechamento ? diaNoMes(ym, v) : diaNoMes(ymAdd(ym, 1), v);
+}
+
+/* ---------- modelo de dados ---------- */
+function dadosVazios() {
+  return {
+    versao: 1,
+    config: {
+      pessoas: ['Pessoa 1', 'Pessoa 2'],
+      cartao: { fechamento: 25, vencimento: 1 },
+      formas: [{ id: 'cartao', nome: 'Cartão de crédito', cartao: true }, { id: 'pix', nome: 'Pix', cartao: false },
+               { id: 'debito', nome: 'Débito', cartao: false }, { id: 'dinheiro', nome: 'Dinheiro', cartao: false }],
+      rendas: [], fixas: [],
+      categorias: [['mercado','🛒','Mercado'],['combustivel','⛽','Combustível'],['restaurante','🍔','Restaurante/delivery'],
+                   ['farmacia','💊','Farmácia'],['lazer','🎉','Lazer'],['imprevistos','❓','Imprevistos']]
+                  .map(([id, icone, nome]) => ({ id, icone, nome, limite: 0 })),
+      fundos: [{ id: 'reserva', icone: '🛟', nome: 'Reserva de emergência', meta: 0, aporte: 0, saldoInicial: 0 }]
+    },
+    orcamentos: {}, lancamentos: [], movimentos: []
+  };
+}
+function normalizar(d) {
+  d.orcamentos = d.orcamentos || {}; d.lancamentos = d.lancamentos || []; d.movimentos = d.movimentos || [];
+  const c = d.config = d.config || {};
+  c.pessoas = c.pessoas || []; c.cartao = c.cartao || { fechamento: 25, vencimento: 1 };
+  c.formas = c.formas || []; c.rendas = c.rendas || []; c.fixas = c.fixas || [];
+  c.categorias = c.categorias || []; c.fundos = c.fundos || [];
+  return d;
+}
+function setPath(obj, path, v) {
+  let o = obj;
+  for (let i = 0; i < path.length - 1; i++) { if (o[path[i]] == null || typeof o[path[i]] !== 'object') o[path[i]] = {}; o = o[path[i]]; }
+  const k = path[path.length - 1];
+  if (v === undefined || v === null) delete o[k]; else o[k] = v;
+}
+/* Operações: cada alteração é uma operação reaplicável. Se duas pessoas
+   gravarem ao mesmo tempo, o app baixa a versão nova e reaplica as suas. */
+function aplicarOp(d, op) {
+  normalizar(d);
+  const P = () => (d.orcamentos[op.ciclo] = d.orcamentos[op.ciclo] || {});
+  switch (op.t) {
+    case 'lanc.add': if (!d.lancamentos.some(x => x.id === op.l.id)) d.lancamentos.push(op.l); break;
+    case 'lanc.upd': { const i = d.lancamentos.findIndex(x => x.id === op.l.id); if (i >= 0) d.lancamentos[i] = op.l; break; }
+    case 'lanc.del': d.lancamentos = d.lancamentos.filter(x => x.id !== op.id); break;
+    case 'plano.set': setPath(P(), op.path, op.v); break;
+    case 'plano.push': { const p = P(); p[op.campo] = p[op.campo] || []; if (!p[op.campo].some(x => x.id === op.v.id)) p[op.campo].push(op.v); break; }
+    case 'plano.pull': { const p = d.orcamentos[op.ciclo]; if (p && p[op.campo]) p[op.campo] = p[op.campo].filter(x => x.id !== op.id); break; }
+    case 'plano.reset': { const p = d.orcamentos[op.ciclo]; if (p) ['rendas', 'fixas', 'limites', 'aportes'].forEach(k => delete p[k]); break; }
+    case 'mov.add': if (!d.movimentos.some(x => x.id === op.m.id)) d.movimentos.push(op.m); break;
+    case 'mov.del': d.movimentos = d.movimentos.filter(x => x.id !== op.id); break;
+    case 'ciclo.fechar':
+      if (d.orcamentos[op.ciclo] && d.orcamentos[op.ciclo].fechado) break; // outra pessoa já fechou
+      d.orcamentos[op.ciclo] = op.snap; op.movs.forEach(m => d.movimentos.push(m)); break;
+    case 'ciclo.reabrir': {
+      const p = d.orcamentos[op.ciclo];
+      if (p) { p.fechado = false; delete p.snapshot; delete p.fechamento; }
+      d.movimentos = d.movimentos.filter(m => m.fechamento !== op.ciclo); break;
+    }
+    case 'config.set': setPath(d.config, op.path, op.v); break;
+  }
+  return d;
+}
+
+/* ---------- armazenamento ---------- */
+function erro(msg, extra) { return Object.assign(new Error(msg), extra || {}); }
+function b64enc(str) {
+  const bytes = new TextEncoder().encode(str); let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function b64dec(b64) { const bin = atob(String(b64).replace(/\s/g, '')); return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))); }
+
+class GitHubStore {
+  constructor(c) {
+    this.owner = c.owner; this.repo = c.repo; this.branch = c.branch || 'main'; this.path = c.path || 'financas.json';
+    this.token = c.token; this.api = (c.api || 'https://api.github.com').replace(/\/$/, '');
+    this.id = `${this.owner}/${this.repo}/${this.path}`;
+  }
+  url(q) { return `${this.api}/repos/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}/contents/${this.path.split('/').map(encodeURIComponent).join('/')}${q ? '?ref=' + encodeURIComponent(this.branch) : ''}`; }
+  hdr(x) { return Object.assign({ 'Accept': 'application/vnd.github+json', 'Authorization': `Bearer ${this.token}`, 'X-GitHub-Api-Version': '2022-11-28' }, x || {}); }
+  async req(url, opt) {
+    let r;
+    try { r = await fetch(url, opt); } catch (e) { throw erro('Sem conexão com o GitHub', { offline: true }); }
+    return r;
+  }
+  async falhaHttp(r) {
+    let m = ''; try { m = (await r.json()).message || ''; } catch (e) {}
+    if (r.status === 401) return erro('Token inválido ou expirado. Gere outro em Ajustes.', { status: 401, auth: true });
+    if (r.status === 403) return erro('Sem permissão ou limite da API atingido. ' + m, { status: 403, auth: true });
+    if (r.status === 404) return erro('Repositório não encontrado (ou o token não tem acesso a ele).', { status: 404 });
+    return erro(`GitHub respondeu ${r.status}. ${m}`, { status: r.status });
+  }
+  async carregar(etag) {
+    const h = etag ? this.hdr({ 'If-None-Match': etag }) : this.hdr();
+    const r = await this.req(this.url(true), { headers: h, cache: 'no-store' });
+    if (r.status === 304) return { naoMudou: true };
+    if (r.status === 404) {
+      // distingue "arquivo não existe" de "repositório inacessível"
+      const rr = await this.req(`${this.api}/repos/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}`, { headers: this.hdr(), cache: 'no-store' });
+      if (rr.ok) return { naoExiste: true };
+      throw await this.falhaHttp(rr);
+    }
+    if (!r.ok) throw await this.falhaHttp(r);
+    const j = await r.json();
+    let texto;
+    if (j.content && j.encoding === 'base64') texto = b64dec(j.content);
+    else { // arquivo > 1 MB: busca o conteúdo bruto
+      const r2 = await this.req(this.url(true), { headers: this.hdr({ 'Accept': 'application/vnd.github.raw+json' }), cache: 'no-store' });
+      if (!r2.ok) throw await this.falhaHttp(r2);
+      texto = await r2.text();
+    }
+    return { data: JSON.parse(texto), sha: j.sha, etag: r.headers.get('ETag') };
+  }
+  async salvar(dados, sha, msg) {
+    const body = { message: msg, content: b64enc(JSON.stringify(dados, null, 1) + '\n'), branch: this.branch };
+    if (sha) body.sha = sha;
+    const r = await this.req(this.url(false), { method: 'PUT', headers: this.hdr({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+    if (r.status === 409 || r.status === 422) throw erro('Conflito de versão', { conflito: true, status: r.status });
+    if (!r.ok) throw await this.falhaHttp(r);
+    const j = await r.json();
+    return { sha: j.content.sha };
+  }
+}
+
+class DemoStore { // dados fictícios, só neste aparelho
+  constructor() { this.id = 'demo'; this.k = 'fin.demo.servidor'; }
+  async carregar() {
+    let x = LS.get(this.k);
+    if (!x) { x = { v: 1, d: dadosDemo() }; LS.set(this.k, x); }
+    return { data: x.d, sha: String(x.v), etag: null };
+  }
+  async salvar(d, sha) {
+    const x = LS.get(this.k) || { v: 0 };
+    if (sha && String(x.v) !== String(sha)) throw erro('Conflito de versão', { conflito: true });
+    x.v++; x.d = d; LS.set(this.k, x); return { sha: String(x.v) };
+  }
+}
+
+function dadosDemo() {
+  const d = dadosVazios(), c = d.config, hoje = hojeISO();
+  c.pessoas = ['Ana', 'Beto'];
+  c.rendas = [{ id: 'sal-ana', nome: 'Salário Ana', pessoa: 'Ana', valor: 450000, dia: 5 }, { id: 'sal-beto', nome: 'Salário Beto', pessoa: 'Beto', valor: 250000, dia: 20 }];
+  c.fixas = [{ id: 'aluguel', nome: 'Aluguel', valor: 150000, dia: 10, cartao: false }, { id: 'luz', nome: 'Luz', valor: 22000, dia: 15, cartao: false },
+             { id: 'internet', nome: 'Internet', valor: 10000, dia: 15, cartao: false }, { id: 'stream', nome: 'Streaming', valor: 4000, dia: 20, cartao: true }];
+  c.categorias = [['mercado','🛒','Mercado',120000],['combustivel','⛽','Combustível',40000],['restaurante','🍔','Restaurante/delivery',40000],
+                  ['farmacia','💊','Farmácia',15000],['lazer','🎉','Lazer',30000],['imprevistos','❓','Imprevistos',20000]]
+                 .map(([id, icone, nome, limite]) => ({ id, icone, nome, limite }));
+  c.fundos = [{ id: 'reserva', icone: '🛟', nome: 'Reserva de emergência', meta: 2000000, aporte: 100000, saldoInicial: 300000 },
+              { id: 'viagem', icone: '✈️', nome: 'Viagem', meta: 1500000, aporte: 76000, saldoInicial: 0 }];
+  const ym = cicloDaData(hoje, 25), { ini } = cicloRange(ym, 25);
+  const dia = n => { const x = new Date(+ini.slice(0, 4), +ini.slice(5, 7) - 1, +ini.slice(8, 10) + n); const s = `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; return s > hoje ? hoje : s; };
+  const L = (n, cat, valor, desc, forma, pessoa, parcelas) => d.lancamentos.push({ id: uid() + n, data: dia(n), ciclo: cicloDaData(dia(n), 25), valor, parcelas: parcelas || 1, categoria: cat, descricao: desc, forma, pessoa, criadoEm: new Date().toISOString() });
+  L(1, 'mercado', 38750, 'Supermercado', 'cartao', 'Ana'); L(2, 'combustivel', 20000, 'Posto', 'cartao', 'Beto');
+  L(3, 'restaurante', 8990, 'Pizza', 'pix', 'Ana'); L(5, 'mercado', 21430, 'Sacolão', 'debito', 'Beto');
+  L(6, 'lazer', 36000, 'Show (3x)', 'cartao', 'Ana', 3); L(8, 'farmacia', 4720, 'Farmácia', 'cartao', 'Beto');
+  d.movimentos.push({ id: uid(), fundo: 'viagem', valor: 76000, data: dia(1), ciclo: ym, tipo: 'aporte', descricao: 'Aporte do mês', pessoa: 'Ana' });
+  return d;
+}
+
+/* ---------- sincronização ---------- */
+function criarStore() {
+  if (LS.get('fin.demo')) return new DemoStore();
+  const c = LS.get('fin.conexao');
+  return (c && c.token && c.owner && c.repo) ? new GitHubStore(c) : null;
+}
+const Sync = {
+  store: null, remoto: null, sha: null, etag: null, pend: [], vista: null,
+  estado: 'ok', msg: '', ocupado: false, denovo: false, antigos: new Set(), naoExiste: false, carregou: false,
+  chave(k) { return 'fin.' + (this.store ? this.store.id : 'x') + '.' + k; },
+  init() {
+    this.store = criarStore(); this.remoto = null; this.sha = null; this.etag = null; this.antigos = new Set();
+    this.naoExiste = false; this.carregou = false; this.estado = 'ok'; this.msg = '';
+    if (!this.store) { this.pend = []; this.vista = null; return; }
+    const c = LS.get(this.chave('cache')); if (c) { this.remoto = c.d; this.sha = c.sha; this.carregou = true; }
+    this.pend = LS.get(this.chave('pend'), []); this.recalc();
+  },
+  recalc() {
+    if (!this.remoto) { this.vista = null; return; }
+    let d = normalizar(clone(this.remoto));
+    for (const op of this.pend) { try { d = aplicarOp(d, op); } catch (e) { console.warn('op ignorada', op, e); } }
+    this.vista = d;
+  },
+  guardar() { LS.set(this.chave('cache'), { d: this.remoto, sha: this.sha }); LS.set(this.chave('pend'), this.pend); },
+  setEstado(e, m) { this.estado = e; this.msg = m || ''; renderTopo(); },
+  falha(e) {
+    console.warn(e);
+    if (e.offline) this.setEstado('offline', 'Sem internet — os lançamentos ficam guardados e sobem quando voltar.');
+    else this.setEstado('erro', e.message);
+  },
+  async puxarInterno(forcar) {
+    const r = await this.store.carregar(forcar ? null : this.etag);
+    if (r.naoMudou) return false;
+    if (r.naoExiste) { this.naoExiste = true; this.carregou = true; this.remoto = null; this.sha = null; this.recalc(); return true; }
+    this.naoExiste = false; this.carregou = true;
+    if (this.antigos.has(r.sha)) return false; // resposta atrasada de uma versão já substituída
+    const mudou = r.sha !== this.sha;
+    this.remoto = r.data; this.sha = r.sha; this.etag = r.etag; this.guardar(); this.recalc();
+    return mudou;
+  },
+  async puxar(forcar) {
+    if (!this.store || this.ocupado) return;
+    try {
+      const mudou = await this.puxarInterno(forcar);
+      if (this.naoExiste) this.setEstado('vazio');
+      else if (['offline', 'erro', 'vazio'].includes(this.estado) || forcar) this.setEstado(this.pend.length ? 'pend' : 'ok');
+      if (mudou) render({ bg: true });
+      if (this.pend.length) this.sincronizar();
+    } catch (e) { this.falha(e); render({ bg: true }); }
+  },
+  enfileirar(ops) {
+    if (!Array.isArray(ops)) ops = [ops];
+    ops.forEach(o => { o.quem = eu(); o.em = new Date().toISOString(); this.pend.push(o); });
+    this.guardar(); this.recalc(); this.setEstado('pend'); render(); this.sincronizar();
+  },
+  async sincronizar() {
+    if (!this.store) return;
+    if (this.ocupado) { this.denovo = true; return; }
+    this.ocupado = true;
+    try {
+      if (!this.remoto && !this.naoExiste) await this.puxarInterno(true);
+      if (this.naoExiste) { this.setEstado('vazio'); return; }
+      let tent = 0;
+      while (this.pend.length) {
+        this.setEstado('sync');
+        const ops = this.pend.slice();
+        let novo = normalizar(clone(this.remoto));
+        for (const op of ops) { try { novo = aplicarOp(novo, op); } catch (e) { console.warn(e); } }
+        try {
+          const r = await this.store.salvar(novo, this.sha, mensagem(ops));
+          if (this.sha) this.antigos.add(this.sha);
+          this.remoto = novo; this.sha = r.sha; this.etag = null;
+          this.pend = this.pend.slice(ops.length); this.guardar(); this.recalc();
+        } catch (e) {
+          if (e.conflito && tent++ < 6) { await this.puxarInterno(true); continue; }
+          throw e;
+        }
+      }
+      this.setEstado('ok');
+    } catch (e) { this.falha(e); }
+    finally {
+      this.ocupado = false; render({ bg: true });
+      if (this.denovo) { this.denovo = false; this.sincronizar(); }
+    }
+  },
+  async criarArquivo() {
+    try {
+      const d = dadosVazios(); const nome = eu(); if (nome) d.config.pessoas[0] = nome;
+      const r = await this.store.salvar(d, null, 'Cria financas.json');
+      this.remoto = d; this.sha = r.sha; this.naoExiste = false; this.guardar(); this.recalc(); this.setEstado('ok'); render();
+    } catch (e) { this.falha(e); toast(e.message); }
+  }
+};
+function mensagem(ops) {
+  const op = ops[ops.length - 1], quem = op.quem || 'App';
+  let m;
+  switch (op.t) {
+    case 'lanc.add': m = `+ ${nomeCat(op.l.categoria)} ${fmt(op.l.valor)}${op.l.descricao ? ' (' + op.l.descricao + ')' : ''}`; break;
+    case 'lanc.upd': m = `edita lançamento ${op.l.descricao || nomeCat(op.l.categoria)}`; break;
+    case 'lanc.del': m = 'exclui lançamento'; break;
+    case 'mov.add': m = `caixinha ${op.m.valor > 0 ? '+' : ''}${fmt(op.m.valor)}`; break;
+    case 'mov.del': m = 'exclui movimentação de caixinha'; break;
+    case 'ciclo.fechar': m = `fecha o ciclo ${nomeCiclo(op.ciclo)}`; break;
+    case 'ciclo.reabrir': m = `reabre o ciclo ${nomeCiclo(op.ciclo)}`; break;
+    case 'config.set': m = 'altera configurações'; break;
+    default: m = `planejamento de ${nomeCiclo(op.ciclo)}`;
+  }
+  return `${quem}: ${m}${ops.length > 1 ? ` (+${ops.length - 1} alteraç${ops.length > 2 ? 'ões' : 'ão'})` : ''}`;
+}
+
+/* ---------- acesso e cálculos ---------- */
+const D = () => Sync.vista;
+const cfg = () => Sync.vista && Sync.vista.config;
+const eu = () => LS.get('fin.eu', '');
+const catPorId = id => cfg().categorias.find(c => c.id === id);
+const nomeCat = id => { const c = cfg() && catPorId(id); return c ? c.nome : 'Categoria removida'; };
+const iconeCat = id => { const c = cfg() && catPorId(id); return c ? c.icone : '•'; };
+const formaPorId = id => cfg().formas.find(f => f.id === id);
+const ehCartao = id => { const f = formaPorId(id); return !!(f && f.cartao); };
+const nomeForma = id => { const f = formaPorId(id); return f ? f.nome : id || ''; };
+
+function numParcelaFixa(f, ym) { return (f.parcelaNum || 1) + ymDiff(ym, f.parcelaRef || ym); }
+function fixaAtiva(f, ym) { if (!f.parcelaTotal) return true; const n = numParcelaFixa(f, ym); return n >= 1 && n <= f.parcelaTotal; }
+
+function planoBase(ym) {
+  const c = cfg(), p = { rendas: {}, fixas: {}, limites: {}, aportes: {}, extras: [], pagos: {}, remanejamentos: [], fechado: false };
+  c.rendas.forEach(r => p.rendas[r.id] = r.valor || 0);
+  c.fixas.forEach(f => { if (fixaAtiva(f, ym)) p.fixas[f.id] = f.valor || 0; });
+  c.categorias.forEach(k => p.limites[k.id] = k.limite || 0);
+  c.fundos.forEach(f => p.aportes[f.id] = f.aporte || 0);
+  return p;
+}
+function plano(ym) {
+  const s = D().orcamentos[ym];
+  if (s && s.snapshot) return Object.assign({ extras: [], pagos: {}, remanejamentos: [] }, clone(s));
+  const b = planoBase(ym); if (!s) return b;
+  const filtra = (o, validos) => { const r = {}; Object.keys(o || {}).forEach(k => { if (validos.has(k)) r[k] = o[k]; }); return r; };
+  const c = cfg();
+  return {
+    rendas: Object.assign(b.rendas, filtra(s.rendas, new Set(c.rendas.map(x => x.id)))),
+    fixas: Object.assign(b.fixas, filtra(s.fixas, new Set(Object.keys(b.fixas)))),
+    limites: Object.assign(b.limites, filtra(s.limites, new Set(c.categorias.map(x => x.id)))),
+    aportes: Object.assign(b.aportes, filtra(s.aportes, new Set(c.fundos.map(x => x.id)))),
+    extras: s.extras || [], pagos: s.pagos || {}, remanejamentos: s.remanejamentos || [],
+    fechado: !!s.fechado, fechamento: s.fechamento
+  };
+}
+function valorParcela(total, n, k) { const base = Math.floor(total / n); return k === 1 ? total - base * (n - 1) : base; }
+function itensDoCiclo(ym) {
+  const out = [];
+  for (const l of D().lancamentos) {
+    const c0 = l.ciclo || cicloDaData(l.data), n = l.parcelas || 1, k = ymDiff(ym, c0) + 1;
+    if (k >= 1 && k <= n) out.push({ l, k, n, valor: valorParcela(l.valor, n, k) });
+  }
+  return out.sort((a, b) => (b.l.data + (b.l.criadoEm || '')).localeCompare(a.l.data + (a.l.criadoEm || '')));
+}
+function resumo(ym) {
+  const c = cfg(), p = plano(ym), itens = itensDoCiclo(ym);
+  const renda = somaObj(p.rendas) + soma(p.extras.map(e => e.valor));
+  const fixas = somaObj(p.fixas), aportes = somaObj(p.aportes), limites = somaObj(p.limites);
+  const gasto = {}, ajuste = {};
+  itens.forEach(i => gasto[i.l.categoria] = (gasto[i.l.categoria] || 0) + i.valor);
+  p.remanejamentos.forEach(r => { ajuste[r.de] = (ajuste[r.de] || 0) - r.valor; ajuste[r.para] = (ajuste[r.para] || 0) + r.valor; });
+  const ids = Object.keys(p.limites);
+  const cats = ids.map(id => {
+    const k = catPorId(id) || { id, icone: '•', nome: 'Categoria removida' };
+    const efetivo = (p.limites[id] || 0) + (ajuste[id] || 0), g = gasto[id] || 0;
+    return { id, icone: k.icone, nome: k.nome, limite: p.limites[id] || 0, ajuste: ajuste[id] || 0, efetivo, gasto: g, resta: efetivo - g };
+  });
+  const orfao = Object.keys(gasto).filter(id => !ids.includes(id));
+  if (orfao.length) { const g = soma(orfao.map(id => gasto[id])); cats.push({ id: '_outros', icone: '•', nome: 'Sem categoria no plano', limite: 0, ajuste: 0, efetivo: 0, gasto: g, resta: -g }); }
+  const gastoVar = soma(cats.map(k => k.gasto));
+  const fixasPagas = Object.keys(p.fixas).filter(id => p.pagos[id]);
+  return { p, renda, fixas, aportes, limites, falta: renda - fixas - limites - aportes, cats, itens, gastoVar, restaVar: limites - gastoVar,
+           fixasPagas, valorPago: soma(fixasPagas.map(id => p.fixas[id])) };
+}
+function saldoFundo(f) { return (f.saldoInicial || 0) + soma(D().movimentos.filter(m => m.fundo === f.id).map(m => m.valor)); }
+function faturaDoCiclo(ym) {
+  const p = plano(ym);
+  const compras = soma(itensDoCiclo(ym).filter(i => ehCartao(i.l.forma)).map(i => i.valor));
+  const fixas = soma(cfg().fixas.filter(f => f.cartao && p.fixas[f.id] != null).map(f => p.fixas[f.id]));
+  return { compras, fixas, total: compras + fixas };
+}
+function comprometidoFuturo(ym, meses) {
+  const out = [];
+  for (let i = 1; i <= meses; i++) {
+    const c = ymAdd(ym, i);
+    const v = soma(itensDoCiclo(c).filter(it => it.n > 1 && (it.l.ciclo || cicloDaData(it.l.data)) <= ym).map(it => it.valor));
+    if (v) out.push({ ciclo: c, valor: v });
+  }
+  return out;
+}
+
+/* ---------- interface ---------- */
+const S = { view: 'inicio', ciclo: null, filtroCat: null, renderPendente: false };
+const ABAS = [['inicio', '🏠', 'Início'], ['extrato', '📋', 'Extrato'], ['planejar', '🧮', 'Planejar'], ['metas', '🎯', 'Metas'], ['ajustes', '⚙️', 'Ajustes']];
+function toast(m, ms) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, ms || 3200); }
+function barra(g, l) {
+  const pct = l > 0 ? g / l : (g > 0 ? 1.01 : 0);
+  const cl = pct > 1 ? 'estouro' : pct >= .8 ? 'alerta' : '';
+  return `<div class="barra"><i class="${cl}" style="width:${Math.min(100, pct * 100).toFixed(1)}%"></i></div>`;
+}
+const ESTADOS = { ok: 'sincronizado', sync: 'salvando…', pend: 'pendente', offline: 'offline', erro: 'erro', vazio: 'sem dados' };
+
+function renderTopo() {
+  const t = $('#topo');
+  const temDados = !!D();
+  if (temDados && !S.ciclo) S.ciclo = cicloDaData(hojeISO());
+  const demo = Sync.store && Sync.store.id === 'demo';
+  let h = `<div class="topo1"><h1>Finanças da Casa${demo ? ' <small style="font-size:11px;color:var(--alerta)">DEMONSTRAÇÃO</small>' : ''}</h1>`;
+  if (Sync.store) h += `<button class="sync" data-act="forcar-sync" title="${esc(Sync.msg)}"><span class="dot ${Sync.estado}"></span>${ESTADOS[Sync.estado]}${Sync.pend.length ? ` (${Sync.pend.length})` : ''}</button>`;
+  h += `</div>`;
+  if (temDados && S.view !== 'ajustes') {
+    const { ini, fim } = cicloRange(S.ciclo);
+    const atual = S.ciclo === cicloDaData(hojeISO());
+    h += `<div class="ciclo"><button data-act="ciclo" data-d="-1" aria-label="Ciclo anterior">‹</button>
+      <div class="nome" data-act="ciclo-hoje"><b>${nomeCiclo(S.ciclo)}${plano(S.ciclo).fechado ? ' 🔒' : ''}</b><small>${fmtD(ini)} a ${fmtD(fim)}${atual ? ' · ciclo atual' : ''}</small></div>
+      <button data-act="ciclo" data-d="1" aria-label="Próximo ciclo">›</button></div>`;
+  }
+  t.innerHTML = h;
+}
+function renderAbas() {
+  $('#abas').innerHTML = ABAS.map(([id, ic, nm]) => `<button class="${S.view === id ? 'on' : ''}" data-act="ir" data-v="${id}"><span>${ic}</span>${nm}</button>`).join('');
+  $('#abas').hidden = !D();
+  $('#fab').hidden = !D() || S.view === 'ajustes';
+}
+function render(opt) {
+  opt = opt || {};
+  if (opt.bg) { // atualização vinda da sincronização: não atrapalha quem está digitando
+    const a = document.activeElement;
+    if (S.view === 'ajustes' || (a && ['INPUT', 'SELECT', 'TEXTAREA'].includes(a.tagName) && $('#main').contains(a))) { S.renderPendente = true; renderTopo(); return; }
+  }
+  S.renderPendente = false;
+  if (D() && !S.ciclo) S.ciclo = cicloDaData(hojeISO());
+  renderTopo(); renderAbas();
+  const m = $('#main');
+  if (!Sync.store) { m.innerHTML = vBoasVindas(); return; }
+  if (Sync.naoExiste && !D()) { m.innerHTML = vArquivoNovo(); return; }
+  if (!D()) {
+    m.innerHTML = Sync.estado === 'erro' || Sync.estado === 'offline'
+      ? `<div class="card"><h3>Não foi possível carregar</h3><p>${esc(Sync.msg)}</p><button class="btn" data-act="forcar-sync">Tentar de novo</button><button class="btn sec" data-act="ir" data-v="ajustes-forcado">Revisar conexão</button></div>`
+      : `<div class="vazio">Carregando…</div>`;
+    if (S.view === 'ajustes') m.innerHTML = vAjustes();
+    return;
+  }
+  if (!eu() || !cfg().pessoas.includes(eu())) { m.innerHTML = vQuemSou(); return; }
+  const V = { inicio: vInicio, extrato: vExtrato, planejar: vPlanejar, metas: vMetas, ajustes: vAjustes };
+  m.innerHTML = (V[S.view] || vInicio)();
+}
+document.addEventListener('focusout', () => setTimeout(() => { if (S.renderPendente && S.view !== 'ajustes') render({ bg: true }); }, 50));
+
+/* ----- telas ----- */
+function vBoasVindas() {
+  return `<div class="boas"><div style="font-size:44px">💰</div><h2>Finanças da Casa</h2>
+    <p class="sub">Orçamento por categoria definido antes do mês, com os gastos do casal lançados no celular ou no computador.</p></div>
+    ${cardConexao()}
+    <div class="card"><h3>Só quer conhecer?</h3><p class="sub">Abre o app com dados fictícios, guardados apenas neste aparelho.</p>
+    <button class="btn sec" data-act="demo">Experimentar com dados de exemplo</button></div>`;
+}
+function cardConexao() {
+  const c = LS.get('fin.conexao', {}) || {};
+  return `<div class="card" id="conexao"><h3>Conectar ao repositório de dados</h3>
+    <div class="campo"><label>Dono do repositório (usuário do GitHub)</label><input type="text" id="cx-owner" value="${esc(c.owner || '')}" autocapitalize="off" autocorrect="off" placeholder="seu-usuario"></div>
+    <div class="campo"><label>Repositório</label><input type="text" id="cx-repo" value="${esc(c.repo || 'financas-dados')}" autocapitalize="off" autocorrect="off"></div>
+    <div class="campo"><label>Token de acesso (fine-grained, só para esse repositório)</label><input type="password" id="cx-token" value="${esc(c.token || '')}" autocomplete="off" placeholder="github_pat_…"></div>
+    <details class="campo"><summary>Avançado</summary>
+      <div class="campo"><label>Branch</label><input type="text" id="cx-branch" value="${esc(c.branch || 'main')}" autocapitalize="off"></div>
+      <div class="campo"><label>Arquivo</label><input type="text" id="cx-path" value="${esc(c.path || 'financas.json')}" autocapitalize="off"></div>
+    </details>
+    <button class="btn" data-act="conectar">Conectar</button>
+    <p class="dica">O token fica guardado só neste aparelho e é enviado apenas para a API do GitHub.</p></div>`;
+}
+function vArquivoNovo() {
+  return `<div class="card"><h3>Repositório conectado</h3><p>O arquivo <code>${esc(Sync.store.path || '')}</code> ainda não existe nesse repositório.</p>
+    <p class="sub">Posso criá-lo com uma estrutura vazia, para vocês preencherem em Ajustes.</p>
+    <button class="btn" data-act="criar-arquivo">Criar arquivo inicial</button>
+    <button class="btn sec" data-act="desconectar">Usar outra conexão</button></div>`;
+}
+function vQuemSou() {
+  return `<div class="card"><h3>Quem está usando este aparelho?</h3><p class="sub">Assim cada lançamento registra quem lançou.</p>
+    <div class="chips">${cfg().pessoas.map(p => `<button class="chip" data-act="sou" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div></div>`;
+}
+function linhaCat(k) {
+  return `<div class="cat" data-act="filtrar" data-id="${esc(k.id)}">
+    <div class="cat-top"><span>${esc(k.icone)} ${esc(k.nome)}</span><span class="${k.resta < 0 ? 'neg' : ''}">${k.resta < 0 ? 'estourou ' + fmt(-k.resta) : 'resta ' + fmt(k.resta)}</span></div>
+    ${barra(k.gasto, k.efetivo)}
+    <div class="mini">${fmt(k.gasto)} de ${fmt(k.efetivo)}${k.ajuste ? ` · remanejado ${k.ajuste > 0 ? '+' : '−'}${fmt(Math.abs(k.ajuste))}` : ''}</div></div>`;
+}
+function vInicio() {
+  const ym = S.ciclo, r = resumo(ym), c = cfg(), hoje = hojeISO(), { ini, fim } = cicloRange(ym);
+  const dentro = hoje >= ini && hoje <= fim, diasRest = dentro ? diffDias(hoje, fim) + 1 : 0;
+  const porDia = dentro && r.restaVar > 0 ? Math.floor(r.restaVar / diasRest) : null;
+  let h = '';
+  if (r.falta !== 0 && !r.p.fechado) h += `<div class="aviso ${r.falta < 0 ? 'neg' : ''}" data-act="ir" data-v="planejar">${r.falta > 0 ? `Falta distribuir ${fmt(r.falta)} da renda deste ciclo` : `O planejado passou da renda em ${fmt(-r.falta)}`} — toque para ajustar</div>`;
+  h += `<section class="card destaque"><div class="rot">Ainda pode gastar nas categorias</div>
+    <div class="grande ${r.restaVar < 0 ? 'neg' : ''}">${fmt(r.restaVar)}</div>
+    <div class="sub">gasto ${fmt(r.gastoVar)} de ${fmt(r.limites)}${porDia != null ? ` · cerca de ${fmt(porDia)} por dia nos próximos ${diasRest} dia${diasRest > 1 ? 's' : ''}` : ''}</div>
+    ${barra(r.gastoVar, r.limites)}</section>`;
+  h += `<section class="card"><h3>Categorias <small>toque para ver os gastos</small></h3>${r.cats.map(linhaCat).join('') || '<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>'}
+    ${r.p.fechado ? '' : '<button class="btn sec" data-act="remanejar">Remanejar entre categorias</button>'}</section>`;
+  const fx = Object.keys(r.p.fixas).map(id => {
+    const f = c.fixas.find(x => x.id === id) || { id, nome: 'Conta removida', dia: 1 };
+    return { f, id, valor: r.p.fixas[id], data: dataNoCiclo(ym, f.dia || 1), pago: !!r.p.pagos[id] };
+  }).sort((a, b) => (a.pago - b.pago) || a.data.localeCompare(b.data));
+  h += `<section class="card"><h3>Contas fixas <small>${r.fixasPagas.length} de ${fx.length} pagas · falta ${fmt(r.fixas - r.valorPago)}</small></h3><div class="linhas">
+    ${fx.map(x => `<div class="ln ${x.pago ? 'pago' : ''}"><button class="chk ${x.pago ? 'on' : ''}" data-act="pagar" data-id="${esc(x.id)}" ${r.p.fechado ? 'disabled' : ''} aria-label="Marcar como paga">${x.pago ? '✓' : ''}</button>
+      <div class="meio"><b>${esc(x.f.nome)}${x.f.parcelaTotal ? ` (${numParcelaFixa(x.f, ym)}/${x.f.parcelaTotal})` : ''}</b><small>vence ${fmtD(x.data)}${x.f.cartao ? ' · no cartão' : ''}</small></div>
+      <div class="val">${fmt(x.valor)}</div></div>`).join('') || '<div class="vazio">Nenhuma conta fixa cadastrada.</div>'}</div></section>`;
+  const fat = faturaDoCiclo(ym), fut = comprometidoFuturo(ym, 6);
+  h += `<section class="card"><h3>Fatura do cartão <small>fecha ${fmtD(fim)} · vence ${fmtD(vencimentoFatura(ym))}</small></h3>
+    <div class="grande" style="font-size:24px">${fmt(fat.total)}</div>
+    <div class="sub">${fmt(fat.compras)} em compras${fat.fixas ? ` + ${fmt(fat.fixas)} de contas fixas no cartão` : ''}</div>
+    ${fut.length ? `<div class="campo"><label>Parcelas já assumidas para os próximos ciclos</label><div class="linhas">${fut.map(f => `<div class="ln"><div class="meio">${nomeCiclo(f.ciclo)}</div><div class="val">${fmt(f.valor)}</div></div>`).join('')}</div></div>` : ''}
+  </section>`;
+  return h;
+}
+function vExtrato() {
+  const r = resumo(S.ciclo); let itens = r.itens; const f = S.filtroCat;
+  if (f) itens = itens.filter(i => i.l.categoria === f || (f === '_outros' && !r.p.limites.hasOwnProperty(i.l.categoria)));
+  const comGasto = r.cats.filter(k => k.gasto > 0 || k.id === f);
+  let h = `<div class="chips rolar"><button class="chip ${!f ? 'on' : ''}" data-act="filtrar" data-id="">Todas</button>
+    ${comGasto.map(k => `<button class="chip ${f === k.id ? 'on' : ''}" data-act="filtrar" data-id="${esc(k.id)}">${esc(k.icone)} ${esc(k.nome)}</button>`).join('')}</div>`;
+  const k = f && r.cats.find(x => x.id === f);
+  h += `<section class="card">${k ? `<h3>${esc(k.icone)} ${esc(k.nome)} <small>${fmt(k.gasto)} de ${fmt(k.efetivo)}</small></h3>${barra(k.gasto, k.efetivo)}` : `<h3>Lançamentos <small>total ${fmt(soma(itens.map(i => i.valor)))}</small></h3>`}
+    <div class="linhas">${itens.map(i => `<div class="ln click" data-act="editar" data-id="${esc(i.l.id)}"><div class="ic">${esc(iconeCat(i.l.categoria))}</div>
+      <div class="meio"><b>${esc(i.l.descricao || nomeCat(i.l.categoria))}</b><small>${fmtD(i.l.data)} · ${esc(nomeForma(i.l.forma))} · ${esc(i.l.pessoa || '')}${i.n > 1 ? ` · parcela ${i.k}/${i.n}` : ''}</small></div>
+      <div class="val">${fmt(i.valor)}</div></div>`).join('') || '<div class="vazio">Nenhum lançamento neste ciclo.</div>'}</div></section>`;
+  return h;
+}
+function inMoney(path, v, dis) { return `<input class="money" inputmode="decimal" value="${inputValor(v)}" data-chg="plano" data-path="${esc(path)}" ${dis ? 'disabled' : ''}>`; }
+function vPlanejar() {
+  const ym = S.ciclo, r = resumo(ym), p = r.p, c = cfg(), dis = p.fechado;
+  let h = `<section class="card resumo"><div class="eq">
+    <span>Renda</span><b>${fmt(r.renda)}</b>
+    <span>− Contas fixas</span><span>${fmt(r.fixas)}</span>
+    <span>− Limites das categorias</span><span>${fmt(r.limites)}</span>
+    <span>− Metas (caixinhas)</span><span>${fmt(r.aportes)}</span>
+    <span class="t">${r.falta >= 0 ? 'Falta distribuir' : 'Passou da renda'}</span><span class="t ${r.falta < 0 ? 'neg' : ''}" style="${r.falta === 0 ? 'color:var(--ok)' : ''}">${fmt(Math.abs(r.falta))}${r.falta === 0 ? ' ✓' : ''}</span>
+  </div></section>`;
+  if (dis) h += `<div class="aviso ok">Este ciclo está fechado. Para alterar, reabra em Metas.</div>`;
+  h += `<section class="card"><h3>Rendas</h3><div>
+    ${Object.keys(p.rendas).map(id => { const x = c.rendas.find(y => y.id === id) || {}; return `<div class="pl"><div class="nm">${esc(x.nome || id)}<small>${esc(x.pessoa || '')} · dia ${x.dia || '-'}</small></div>${inMoney('rendas.' + id, p.rendas[id], dis)}</div>`; }).join('')}
+    ${p.extras.map(e => `<div class="pl"><div class="nm">${esc(e.descricao)}<small>renda extra deste ciclo</small></div><b>${fmt(e.valor)}</b>${dis ? '' : `<button class="x" data-act="del-extra" data-id="${esc(e.id)}" aria-label="Remover">✕</button>`}</div>`).join('')}
+    </div>${dis ? '' : '<button class="btn sec" data-act="add-extra">+ Renda extra (13º, férias, honorários…)</button>'}</section>`;
+  h += `<section class="card"><h3>Contas fixas <small>valor deste ciclo</small></h3><div>
+    ${Object.keys(p.fixas).map(id => { const x = c.fixas.find(y => y.id === id) || {}; return `<div class="pl"><div class="nm">${esc(x.nome || id)}${x.parcelaTotal ? ` (${numParcelaFixa(x, ym)}/${x.parcelaTotal})` : ''}<small>vence ${fmtD(dataNoCiclo(ym, x.dia || 1))}</small></div>${inMoney('fixas.' + id, p.fixas[id], dis)}</div>`; }).join('') || '<div class="vazio">Nenhuma.</div>'}
+    </div></section>`;
+  h += `<section class="card"><h3>Limites por categoria</h3><div>
+    ${r.cats.filter(k => k.id !== '_outros').map(k => `<div class="pl"><div class="nm">${esc(k.icone)} ${esc(k.nome)}<small>gasto até agora ${fmt(k.gasto)}${k.ajuste ? ` · remanejado ${k.ajuste > 0 ? '+' : '−'}${fmt(Math.abs(k.ajuste))}` : ''}</small></div>${inMoney('limites.' + k.id, k.limite, dis)}</div>`).join('')}
+    </div></section>`;
+  h += `<section class="card"><h3>Metas (aporte deste ciclo)</h3><div>
+    ${Object.keys(p.aportes).map(id => { const f = c.fundos.find(y => y.id === id) || {}; return `<div class="pl"><div class="nm">${esc(f.icone || '')} ${esc(f.nome || id)}<small>saldo ${fmt(f.id ? saldoFundo(f) : 0)}</small></div>${inMoney('aportes.' + id, p.aportes[id], dis)}</div>`; }).join('')}
+    </div></section>`;
+  if (p.remanejamentos.length) h += `<section class="card"><h3>Remanejamentos</h3><div class="linhas">${p.remanejamentos.map(x => `<div class="ln"><div class="meio"><b>${esc(nomeCat(x.de))} → ${esc(nomeCat(x.para))}</b><small>${fmtD(x.data)} · ${esc(x.pessoa || '')}</small></div><div class="val">${fmt(x.valor)}</div>${dis ? '' : `<button class="x" data-act="del-reman" data-id="${esc(x.id)}">✕</button>`}</div>`).join('')}</div></section>`;
+  if (!dis) h += `<section class="card"><h3>Padrões</h3><p class="sub">Cada ciclo novo começa com os valores padrão definidos em Ajustes.</p>
+    <button class="btn sec" data-act="salvar-padrao">Usar os valores deste ciclo como padrão</button>
+    <button class="btn sec" data-act="restaurar-padrao">Voltar este ciclo aos valores padrão</button></section>`;
+  return h;
+}
+function previaFechamento(ym) {
+  const r = resumo(ym), c = cfg();
+  const ja = {}; D().movimentos.filter(m => m.ciclo === ym && m.tipo === 'aporte' && !m.fechamento).forEach(m => ja[m.fundo] = (ja[m.fundo] || 0) + m.valor);
+  const pend = c.fundos.map(f => ({ f, planejado: r.p.aportes[f.id] || 0, feito: ja[f.id] || 0 })).map(x => Object.assign(x, { falta: Math.max(0, x.planejado - x.feito) }));
+  const sobra = r.renda - r.fixas - r.gastoVar - r.aportes;
+  return { r, pend, sobra };
+}
+function vMetas() {
+  const c = cfg(), ym = S.ciclo;
+  let h = c.fundos.map(f => {
+    const s = saldoFundo(f), pct = f.meta ? s / f.meta : 0, aporte = plano(ym).aportes[f.id] || f.aporte || 0;
+    let prev = '';
+    if (f.meta && s < f.meta && aporte > 0) { const n = Math.ceil((f.meta - s) / aporte); prev = `no ritmo de ${fmt(aporte)}/mês, chega lá em ${nomeCiclo(ymAdd(cicloDaData(hojeISO()), n))} (${n} ${n > 1 ? 'meses' : 'mês'})`; }
+    else if (f.meta && s >= f.meta) prev = 'meta atingida 🎉';
+    return `<section class="card"><h3>${esc(f.icone || '')} ${esc(f.nome)} <small>${f.meta ? 'meta ' + fmt(f.meta) : ''}</small></h3>
+      <div class="grande" style="font-size:24px">${fmt(s)}</div>${f.meta ? barra(s, f.meta).replace('estouro', '').replace('alerta', '') : ''}
+      <div class="prog"><span>${f.meta ? (pct * 100).toFixed(0) + '%' : ''}</span><span>${prev}</span></div>
+      ${f.obs ? `<p class="dica">${esc(f.obs)}</p>` : ''}
+      <div style="display:flex;gap:8px"><button class="btn sec" data-act="mov" data-id="${esc(f.id)}" data-tipo="aporte">Guardar</button><button class="btn sec" data-act="mov" data-id="${esc(f.id)}" data-tipo="retirada">Retirar</button></div></section>`;
+  }).join('') || '<div class="card vazio">Nenhuma caixinha. Crie em Ajustes.</div>';
+  const pv = previaFechamento(ym), p = pv.r.p, { fim } = cicloRange(ym);
+  if (p.fechado) {
+    const fz = p.fechamento || {};
+    h += `<section class="card"><h3>🔒 ${nomeCiclo(ym)} fechado <small>${fz.em ? fmtD(fz.em) : ''} ${esc(fz.pessoa || '')}</small></h3>
+      <p class="sub">Sobra de ${fmt(fz.sobra || 0)} enviada para ${esc((c.fundos.find(f => f.id === fz.destino) || {}).nome || '—')}.</p>
+      <button class="btn perigo" data-act="reabrir">Reabrir ciclo</button></section>`;
+  } else {
+    h += `<section class="card"><h3>Fechamento de ${nomeCiclo(ym)} <small>ciclo termina ${fmtD(fim)}</small></h3>
+      <div class="eq"><span>Renda</span><span>${fmt(pv.r.renda)}</span><span>− Contas fixas</span><span>${fmt(pv.r.fixas)}</span>
+      <span>− Gastos nas categorias</span><span>${fmt(pv.r.gastoVar)}</span><span>− Metas</span><span>${fmt(pv.r.aportes)}</span>
+      <span class="t">${pv.sobra >= 0 ? 'Sobra' : 'Faltou'}</span><span class="t ${pv.sobra < 0 ? 'neg' : ''}">${fmt(Math.abs(pv.sobra))}</span></div>
+      <button class="btn" data-act="fechar">Fechar ciclo</button></section>`;
+  }
+  const movs = D().movimentos.slice().sort((a, b) => (b.data + b.id).localeCompare(a.data + a.id)).slice(0, 20);
+  h += `<section class="card"><h3>Movimentações recentes</h3><div class="linhas">${movs.map(m => { const f = c.fundos.find(x => x.id === m.fundo) || {};
+    return `<div class="ln"><div class="ic">${esc(f.icone || '•')}</div><div class="meio"><b>${esc(m.descricao || f.nome || '')}</b><small>${fmtD(m.data)} · ${esc(f.nome || '')} · ${esc(m.pessoa || '')}</small></div>
+      <div class="val ${m.valor < 0 ? 'neg' : ''}">${m.valor > 0 ? '+' : ''}${fmt(m.valor)}</div>${m.fechamento ? '' : `<button class="x" data-act="del-mov" data-id="${esc(m.id)}">✕</button>`}</div>`; }).join('') || '<div class="vazio">Nenhuma ainda.</div>'}</div></section>`;
+  return h;
+}
+
+/* ----- ajustes ----- */
+const EDS = {
+  categorias: { t: 'Categorias (limite padrão por ciclo)', f: [['icone', 'Ícone', 'txt', 'w3'], ['nome', 'Nome', 'txt'], ['limite', 'Limite', 'val']], novo: () => ({ id: uid(), icone: '🏷️', nome: '', limite: 0 }) },
+  fixas: { t: 'Contas fixas', f: [['nome', 'Nome', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3'], ['parcAtual', 'Parcela atual', 'int', 'w3'], ['parcelaTotal', 'de', 'int', 'w3'], ['cartao', 'no cartão', 'bool']], novo: () => ({ id: uid(), nome: '', valor: 0, dia: 10, cartao: false }) },
+  rendas: { t: 'Rendas', f: [['nome', 'Nome', 'txt'], ['pessoa', 'Pessoa', 'txt'], ['valor', 'Valor', 'val'], ['dia', 'Dia', 'int', 'w3']], novo: () => ({ id: uid(), nome: '', pessoa: eu(), valor: 0, dia: 5 }) },
+  fundos: { t: 'Caixinhas (metas)', f: [['icone', 'Ícone', 'txt', 'w3'], ['nome', 'Nome', 'txt'], ['meta', 'Meta', 'val'], ['aporte', 'Aporte mensal', 'val'], ['saldoInicial', 'Saldo inicial', 'val'], ['obs', 'Observação', 'txt']], novo: () => ({ id: uid(), icone: '🎯', nome: '', meta: 0, aporte: 0, saldoInicial: 0 }) },
+  formas: { t: 'Formas de pagamento', f: [['nome', 'Nome', 'txt'], ['cartao', 'é cartão de crédito', 'bool']], novo: () => ({ id: uid(), nome: '', cartao: false }) }
+};
+function edLinha(key, o) {
+  const ymA = cicloDaData(hojeISO());
+  return `<div class="ed-row" data-id="${esc(o.id)}">${EDS[key].f.map(([k, rot, tp, cl]) => {
+    let v = o[k];
+    if (k === 'parcAtual') v = o.parcelaTotal ? numParcelaFixa(o, ymA) : '';
+    if (tp === 'bool') return `<label class="bool"><input type="checkbox" data-f="${k}" ${v ? 'checked' : ''}> ${rot}</label>`;
+    if (tp === 'val') return `<label>${rot}<input class="money" inputmode="decimal" data-f="${k}" value="${inputValor(v)}"></label>`;
+    if (tp === 'int') return `<label class="${cl || ''}">${rot}<input type="number" inputmode="numeric" data-f="${k}" value="${v == null ? '' : esc(v)}"></label>`;
+    return `<label class="${cl || ''}">${rot}<input type="text" data-f="${k}" value="${esc(v)}"></label>`;
+  }).join('')}<button class="x" data-act="ed-del" aria-label="Remover">✕</button></div>`;
+}
+function vEditor(key) {
+  return `<details class="card" data-ed="${key}"><summary>${EDS[key].t}</summary><div class="ed-lista">${cfg()[key].map(o => edLinha(key, o)).join('')}</div>
+    <div style="display:flex;gap:8px"><button class="btn sec" data-act="ed-add">+ Adicionar</button><button class="btn" data-act="ed-salvar">Salvar</button></div></details>`;
+}
+function vAjustes() {
+  const c = cfg(), demo = Sync.store && Sync.store.id === 'demo';
+  let h = '';
+  if (c) {
+    h += `<section class="card"><h3>Quem está usando este aparelho</h3><div class="chips">${c.pessoas.map(p => `<button class="chip ${eu() === p ? 'on' : ''}" data-act="sou" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div></section>`;
+    h += `<details class="card" data-geral><summary>Geral (pessoas e ciclo da fatura)</summary>
+      <div class="campo"><label>Pessoas (separadas por vírgula)</label><input type="text" id="g-pessoas" value="${esc(c.pessoas.join(', '))}"></div>
+      <div style="display:flex;gap:10px"><div class="campo" style="flex:1"><label>Dia do fechamento da fatura</label><input type="number" id="g-fech" value="${c.cartao.fechamento}"></div>
+      <div class="campo" style="flex:1"><label>Dia do vencimento</label><input type="number" id="g-venc" value="${c.cartao.vencimento}"></div></div>
+      <p class="dica">O ciclo do orçamento vai do dia seguinte ao fechamento até o fechamento do mês seguinte.</p>
+      <button class="btn" data-act="geral-salvar">Salvar</button></details>`;
+    h += ['categorias', 'fixas', 'rendas', 'fundos', 'formas'].map(vEditor).join('');
+    h += `<section class="card"><h3>Exportar</h3><button class="btn sec" data-act="csv">Baixar lançamentos (CSV para Excel)</button><button class="btn sec" data-act="backup">Baixar cópia completa (JSON)</button></section>`;
+  }
+  if (demo) h += `<section class="card"><h3>Modo demonstração</h3><p class="sub">Os dados são fictícios e ficam só neste aparelho.</p><button class="btn" data-act="sair-demo">Sair da demonstração e conectar ao GitHub</button><button class="btn sec" data-act="reset-demo">Recomeçar a demonstração</button></section>`;
+  else h += cardConexao() + `<section class="card"><button class="btn perigo" data-act="desconectar">Desconectar este aparelho</button><p class="dica">Remove o token deste aparelho. Os dados continuam no GitHub.</p></section>`;
+  h += `<p class="dica" style="text-align:center">Finanças da Casa · versão 1.0</p>`;
+  return h;
+}
+
+/* ----- folhas (formulários) ----- */
+function abrirSheet(titulo, corpo, montar) {
+  const w = $('#sheet');
+  w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="sheet-h"><h2>${titulo}</h2><button class="x" data-fechar aria-label="Fechar">✕</button></div>${corpo}</div>`;
+  w.hidden = false; document.body.style.overflow = 'hidden';
+  w.onclick = e => { if (e.target === w || e.target.closest('[data-fechar]')) fecharSheet(); };
+  if (montar) montar(w.querySelector('.sheet'));
+}
+function fecharSheet() { const w = $('#sheet'); w.hidden = true; w.innerHTML = ''; document.body.style.overflow = ''; if (S.renderPendente) render({ bg: true }); }
+
+function abrirLancamento(l) {
+  const c = cfg(), novo = !l, ultima = LS.get('fin.ultimaForma');
+  const st = {
+    valor: l ? inputValor(l.valor) : '', desc: l ? l.descricao || '' : '', cat: l ? l.categoria : (S.view === 'extrato' && S.filtroCat && S.filtroCat !== '_outros' ? S.filtroCat : ''),
+    data: l ? l.data : hojeISO(), forma: l ? l.forma : (c.formas.some(f => f.id === ultima) ? ultima : (c.formas[0] || {}).id),
+    parcelas: l ? l.parcelas || 1 : 1, pessoa: l ? l.pessoa : eu()
+  };
+  const descs = [...new Set(D().lancamentos.slice().reverse().map(x => x.descricao).filter(Boolean))].slice(0, 60);
+  const corpo = `
+    <div class="campo"><label>Valor</label><input class="grande-in" id="l-valor" inputmode="decimal" placeholder="0,00" value="${esc(st.valor)}"></div>
+    <div class="campo"><label>Descrição</label><input type="text" id="l-desc" list="l-descs" value="${esc(st.desc)}" placeholder="opcional"><datalist id="l-descs">${descs.map(d => `<option value="${esc(d)}">`).join('')}</datalist></div>
+    <div class="campo"><label>Categoria</label><div class="chips" id="l-cats"></div></div>
+    <div class="alertinha" id="l-alerta"></div>
+    <div class="campo"><label>Forma de pagamento</label><div class="chips" id="l-formas"></div></div>
+    <div class="campo" id="l-parc-box"><label>Parcelas</label><select id="l-parc">${Array.from({ length: 24 }, (_, i) => `<option value="${i + 1}">${i ? (i + 1) + 'x' : 'à vista'}</option>`).join('')}</select></div>
+    <div style="display:flex;gap:10px"><div class="campo" style="flex:1"><label>Data da compra</label><input type="date" id="l-data" value="${st.data}"></div>
+    <div class="campo" style="flex:1"><label>Quem</label><select id="l-pessoa">${c.pessoas.map(p => `<option ${p === st.pessoa ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div></div>
+    <div class="sub" id="l-ciclo" style="margin-top:6px"></div>
+    <button class="btn" id="l-salvar">${novo ? 'Lançar' : 'Salvar alterações'}</button>
+    ${novo ? '' : '<button class="btn perigo" id="l-excluir">Excluir lançamento</button>'}`;
+  abrirSheet(novo ? 'Novo gasto' : 'Editar gasto', corpo, sh => {
+    const q = s => sh.querySelector(s);
+    q('#l-parc').value = String(st.parcelas);
+    const atualiza = () => {
+      st.data = q('#l-data').value || hojeISO();
+      const ym = cicloDaData(st.data), r = resumo(ym);
+      // ao editar, desconsidera o próprio lançamento no saldo
+      const proprio = l ? itensDoCiclo(ym).filter(i => i.l.id === l.id) : [];
+      const resta = id => { const k = r.cats.find(x => x.id === id); return k ? k.resta + soma(proprio.filter(i => i.l.categoria === id).map(i => i.valor)) : 0; };
+      q('#l-cats').innerHTML = c.categorias.map(k => `<button type="button" class="chip ${st.cat === k.id ? 'on' : ''}" data-cat="${esc(k.id)}">${esc(k.icone)} ${esc(k.nome)}<small class="${resta(k.id) < 0 ? 'neg' : ''}">resta ${fmt(resta(k.id))}</small></button>`).join('');
+      q('#l-formas').innerHTML = c.formas.map(f => `<button type="button" class="chip ${st.forma === f.id ? 'on' : ''}" data-forma="${esc(f.id)}">${esc(f.nome)}</button>`).join('');
+      const cartao = ehCartao(st.forma); q('#l-parc-box').style.display = cartao ? '' : 'none';
+      const n = cartao ? +q('#l-parc').value : 1, v = parseValor(q('#l-valor').value);
+      const al = q('#l-alerta'); al.className = 'alertinha'; al.textContent = '';
+      if (st.cat && v > 0) {
+        const p1 = valorParcela(v, n, 1), rs = resta(st.cat);
+        if (p1 > rs) { al.classList.add('neg'); al.textContent = `Este gasto estoura ${nomeCat(st.cat)} em ${fmt(p1 - Math.max(rs, 0))}${rs > 0 ? '' : ' (a categoria já está sem saldo)'}. Dá para salvar e depois remanejar de outra categoria.`; }
+        else if (rs - p1 < rs * 0.2 + 1 && rs > 0) al.textContent = `Depois deste gasto, sobram ${fmt(rs - p1)} em ${nomeCat(st.cat)}.`;
+      }
+      const { ini, fim } = cicloRange(ym);
+      q('#l-ciclo').textContent = `Entra no ciclo ${nomeCiclo(ym)} (${fmtD(ini)} a ${fmtD(fim)})${n > 1 ? `; ${n} parcelas de ~${fmt(valorParcela(v || 0, n, 2))} até ${nomeCiclo(ymAdd(ym, n - 1))}` : ''}.`;
+    };
+    sh.addEventListener('click', e => {
+      const ct = e.target.closest('[data-cat]'), fm = e.target.closest('[data-forma]');
+      if (ct) { st.cat = ct.dataset.cat; atualiza(); }
+      if (fm) { st.forma = fm.dataset.forma; atualiza(); }
+    });
+    ['#l-valor', '#l-parc', '#l-data'].forEach(s => q(s).addEventListener('input', atualiza));
+    q('#l-desc').addEventListener('change', () => {
+      if (st.cat) return; const d = q('#l-desc').value.trim(); if (!d) return;
+      const ant = D().lancamentos.slice().reverse().find(x => x.descricao === d); if (ant) { st.cat = ant.categoria; atualiza(); }
+    });
+    q('#l-salvar').onclick = () => {
+      const v = parseValor(q('#l-valor').value);
+      if (!(v > 0)) { toast('Informe o valor do gasto.'); q('#l-valor').focus(); return; }
+      if (!st.cat) { toast('Escolha a categoria.'); return; }
+      const data = q('#l-data').value || hojeISO(), n = ehCartao(st.forma) ? +q('#l-parc').value : 1;
+      const novoL = Object.assign({}, l || { id: uid(), criadoEm: new Date().toISOString() }, {
+        data, ciclo: cicloDaData(data), valor: v, parcelas: n, categoria: st.cat, descricao: q('#l-desc').value.trim(),
+        forma: st.forma, pessoa: q('#l-pessoa').value
+      });
+      if (l) novoL.atualizadoEm = new Date().toISOString();
+      LS.set('fin.ultimaForma', st.forma);
+      fecharSheet();
+      Sync.enfileirar(novo ? { t: 'lanc.add', l: novoL } : { t: 'lanc.upd', l: novoL });
+      const k = resumo(novoL.ciclo).cats.find(x => x.id === novoL.categoria);
+      toast(`${novo ? 'Lançado' : 'Atualizado'}: ${nomeCat(novoL.categoria)} ${fmt(v)}${k ? ` · ${k.resta >= 0 ? 'resta ' + fmt(k.resta) : 'estourou ' + fmt(-k.resta)}` : ''}`, 4000);
+    };
+    if (!novo) q('#l-excluir').onclick = () => { if (confirm('Excluir este lançamento' + ((l.parcelas || 1) > 1 ? ' e todas as parcelas' : '') + '?')) { fecharSheet(); Sync.enfileirar({ t: 'lanc.del', id: l.id }); toast('Lançamento excluído.'); } };
+    atualiza();
+    if (novo) setTimeout(() => q('#l-valor').focus(), 60);
+  });
+}
+function abrirRemanejar() {
+  const r = resumo(S.ciclo), cats = r.cats.filter(k => k.id !== '_outros');
+  const estourada = cats.find(k => k.resta < 0), sobrando = cats.slice().sort((a, b) => b.resta - a.resta)[0];
+  const opt = sel => cats.map(k => `<option value="${esc(k.id)}" ${k.id === sel ? 'selected' : ''}>${esc(k.icone)} ${esc(k.nome)} (resta ${fmt(k.resta)})</option>`).join('');
+  abrirSheet('Remanejar', `<p class="sub">Tira saldo de uma categoria e passa para outra, só neste ciclo.</p>
+    <div class="campo"><label>Tirar de</label><select id="r-de">${opt(sobrando && sobrando.id)}</select></div>
+    <div class="campo"><label>Passar para</label><select id="r-para">${opt(estourada && estourada.id)}</select></div>
+    <div class="campo"><label>Valor</label><input class="money" id="r-valor" inputmode="decimal" value="${estourada ? inputValor(Math.min(-estourada.resta, Math.max(0, sobrando.resta))) : ''}"></div>
+    <button class="btn" id="r-ok">Remanejar</button>`, sh => {
+    sh.querySelector('#r-ok').onclick = () => {
+      const de = sh.querySelector('#r-de').value, para = sh.querySelector('#r-para').value, v = parseValor(sh.querySelector('#r-valor').value);
+      if (de === para) return toast('Escolha categorias diferentes.');
+      if (!(v > 0)) return toast('Informe o valor.');
+      fecharSheet();
+      Sync.enfileirar({ t: 'plano.push', ciclo: S.ciclo, campo: 'remanejamentos', v: { id: uid(), de, para, valor: v, pessoa: eu(), data: hojeISO() } });
+      toast(`${fmt(v)} passou de ${nomeCat(de)} para ${nomeCat(para)}.`);
+    };
+  });
+}
+function abrirExtra() {
+  abrirSheet('Renda extra', `<p class="sub">Entra só neste ciclo. Depois, distribua o valor nas metas ou nas categorias.</p>
+    <div class="campo"><label>Descrição</label><input type="text" id="e-desc" placeholder="13º salário, férias, honorários…"></div>
+    <div class="campo"><label>Valor</label><input class="money" id="e-valor" inputmode="decimal"></div><button class="btn" id="e-ok">Adicionar</button>`, sh => {
+    sh.querySelector('#e-ok').onclick = () => {
+      const d = sh.querySelector('#e-desc').value.trim() || 'Renda extra', v = parseValor(sh.querySelector('#e-valor').value);
+      if (!(v > 0)) return toast('Informe o valor.');
+      fecharSheet(); Sync.enfileirar({ t: 'plano.push', ciclo: S.ciclo, campo: 'extras', v: { id: uid(), descricao: d, valor: v } });
+    };
+  });
+}
+function abrirMov(fid, tipo) {
+  const f = cfg().fundos.find(x => x.id === fid);
+  abrirSheet(`${tipo === 'aporte' ? 'Guardar em' : 'Retirar de'} ${esc(f.nome)}`, `<p class="sub">Saldo atual: ${fmt(saldoFundo(f))}</p>
+    <div class="campo"><label>Valor</label><input class="money grande-in" id="m-valor" inputmode="decimal" value="${tipo === 'aporte' ? inputValor(plano(S.ciclo).aportes[fid] || 0) : ''}"></div>
+    <div class="campo"><label>Descrição</label><input type="text" id="m-desc" placeholder="${tipo === 'aporte' ? 'Aporte do mês' : 'Ex.: pagamento do IPVA'}"></div>
+    <div class="campo"><label>Data</label><input type="date" id="m-data" value="${hojeISO()}"></div><button class="btn" id="m-ok">Confirmar</button>
+    ${tipo === 'aporte' ? '<p class="dica">O aporte planejado do ciclo também é registrado automaticamente no fechamento. Se guardar agora, o fechamento lança só a diferença.</p>' : ''}`, sh => {
+    sh.querySelector('#m-ok').onclick = () => {
+      const v = parseValor(sh.querySelector('#m-valor').value); if (!(v > 0)) return toast('Informe o valor.');
+      const data = sh.querySelector('#m-data').value || hojeISO();
+      fecharSheet();
+      Sync.enfileirar({ t: 'mov.add', m: { id: uid(), fundo: fid, valor: tipo === 'aporte' ? v : -v, data, ciclo: S.ciclo, tipo, descricao: sh.querySelector('#m-desc').value.trim() || (tipo === 'aporte' ? 'Aporte' : 'Retirada'), pessoa: eu() } });
+    };
+  });
+}
+function abrirFechar() {
+  const ym = S.ciclo, pv = previaFechamento(ym), c = cfg(), { fim } = cicloRange(ym), cedo = hojeISO() <= fim;
+  const destinoPadrao = (c.fundos.find(f => f.id === 'reserva') || c.fundos[0] || {}).id;
+  abrirSheet(`Fechar ${nomeCiclo(ym)}`, `${cedo ? `<div class="alertinha">O ciclo ainda não terminou (vai até ${fmtD(fim)}). Fechar agora congela os números.</div>` : ''}
+    <div class="campo"><label>Aportes planejados que serão registrados</label><div class="linhas">${pv.pend.map(x => `<div class="ln"><div class="meio">${esc(x.f.icone || '')} ${esc(x.f.nome)}${x.feito ? `<small>já guardado ${fmt(x.feito)}</small>` : ''}</div><div class="val">${fmt(x.falta)}</div></div>`).join('') || '<div class="vazio">Nenhum.</div>'}</div></div>
+    <div class="campo"><label>${pv.sobra >= 0 ? `Sobra do ciclo: ${fmt(pv.sobra)} — enviar para` : `Faltou ${fmt(-pv.sobra)} — tirar de`}</label>
+    <select id="f-dest">${c.fundos.map(f => `<option value="${esc(f.id)}" ${f.id === destinoPadrao ? 'selected' : ''}>${esc(f.icone || '')} ${esc(f.nome)}</option>`).join('')}</select></div>
+    <button class="btn" id="f-ok">Fechar ciclo</button>`, sh => {
+    sh.querySelector('#f-ok').onclick = () => {
+      const dest = sh.querySelector('#f-dest').value, hoje = hojeISO();
+      const movs = pv.pend.filter(x => x.falta > 0).map(x => ({ id: uid() + x.f.id, fundo: x.f.id, valor: x.falta, data: hoje, ciclo: ym, tipo: 'aporte', descricao: `Aporte de ${nomeCiclo(ym)}`, pessoa: eu(), fechamento: ym }));
+      if (pv.sobra && dest) movs.push({ id: uid() + 'sobra', fundo: dest, valor: pv.sobra, data: hoje, ciclo: ym, tipo: 'sobra', descricao: `${pv.sobra > 0 ? 'Sobra' : 'Estouro'} de ${nomeCiclo(ym)}`, pessoa: eu(), fechamento: ym });
+      const snap = Object.assign(clone(plano(ym)), { fechado: true, snapshot: true, fechamento: { em: hoje, pessoa: eu(), sobra: pv.sobra, destino: dest } });
+      fecharSheet(); Sync.enfileirar({ t: 'ciclo.fechar', ciclo: ym, snap, movs }); toast(`${nomeCiclo(ym)} fechado.`);
+    };
+  });
+}
+
+/* ----- ações ----- */
+function baixar(nome, conteudo, tipo) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([conteudo], { type: tipo })); a.download = nome;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function lerEditor(box, key) {
+  const orig = cfg()[key], ymA = cicloDaData(hojeISO());
+  return [...box.querySelectorAll('.ed-row')].map(row => {
+    const o = Object.assign({}, orig.find(x => x.id === row.dataset.id) || { id: row.dataset.id });
+    EDS[key].f.forEach(([k, , tp]) => {
+      const inp = row.querySelector(`[data-f="${k}"]`); if (!inp) return;
+      if (tp === 'bool') o[k] = inp.checked;
+      else if (tp === 'val') { const v = parseValor(inp.value); o[k] = isNaN(v) ? 0 : v; }
+      else if (tp === 'int') o[k] = inp.value === '' ? null : parseInt(inp.value, 10);
+      else o[k] = inp.value.trim();
+    });
+    if (key === 'fixas') {
+      if (o.parcelaTotal > 0) { o.parcelaNum = o.parcAtual || 1; o.parcelaRef = ymA; } else { delete o.parcelaTotal; delete o.parcelaNum; delete o.parcelaRef; }
+      delete o.parcAtual; o.dia = o.dia || 1;
+    }
+    if (key === 'rendas') o.dia = o.dia || 1;
+    Object.keys(o).forEach(k => o[k] == null && delete o[k]);
+    return o;
+  }).filter(o => o.nome);
+}
+const ACT = {
+  ir: el => { S.view = el.dataset.v === 'ajustes-forcado' ? 'ajustes' : el.dataset.v; if (S.view !== 'extrato') S.filtroCat = null; window.scrollTo(0, 0); render(); },
+  ciclo: el => { S.ciclo = ymAdd(S.ciclo, +el.dataset.d); render(); },
+  'ciclo-hoje': () => { S.ciclo = cicloDaData(hojeISO()); render(); },
+  lancar: () => abrirLancamento(),
+  editar: el => { const l = D().lancamentos.find(x => x.id === el.dataset.id); if (l) abrirLancamento(l); },
+  filtrar: el => { S.filtroCat = el.dataset.id || null; S.view = 'extrato'; render(); },
+  pagar: el => { const id = el.dataset.id, p = plano(S.ciclo); Sync.enfileirar({ t: 'plano.set', ciclo: S.ciclo, path: ['pagos', id], v: p.pagos[id] ? null : true }); },
+  remanejar: () => abrirRemanejar(),
+  'del-reman': el => Sync.enfileirar({ t: 'plano.pull', ciclo: S.ciclo, campo: 'remanejamentos', id: el.dataset.id }),
+  'add-extra': () => abrirExtra(),
+  'del-extra': el => Sync.enfileirar({ t: 'plano.pull', ciclo: S.ciclo, campo: 'extras', id: el.dataset.id }),
+  'salvar-padrao': () => {
+    if (!confirm('Os próximos ciclos passam a começar com os valores deste. Confirmar?')) return;
+    const p = plano(S.ciclo), c = clone(cfg());
+    c.categorias.forEach(k => { if (p.limites[k.id] != null) k.limite = p.limites[k.id]; });
+    c.fundos.forEach(f => { if (p.aportes[f.id] != null) f.aporte = p.aportes[f.id]; });
+    c.fixas.forEach(f => { if (p.fixas[f.id] != null) f.valor = p.fixas[f.id]; });
+    c.rendas.forEach(r => { if (p.rendas[r.id] != null) r.valor = p.rendas[r.id]; });
+    Sync.enfileirar(['categorias', 'fundos', 'fixas', 'rendas'].map(k => ({ t: 'config.set', path: [k], v: c[k] }))); toast('Valores padrão atualizados.');
+  },
+  'restaurar-padrao': () => { if (confirm('Voltar rendas, fixas, limites e metas deste ciclo aos valores padrão?')) Sync.enfileirar({ t: 'plano.reset', ciclo: S.ciclo }); },
+  mov: el => abrirMov(el.dataset.id, el.dataset.tipo),
+  'del-mov': el => { if (confirm('Excluir esta movimentação?')) Sync.enfileirar({ t: 'mov.del', id: el.dataset.id }); },
+  fechar: () => abrirFechar(),
+  reabrir: () => { if (confirm('Reabrir o ciclo? Os aportes e a sobra registrados no fechamento serão desfeitos.')) Sync.enfileirar({ t: 'ciclo.reabrir', ciclo: S.ciclo }); },
+  sou: el => { LS.set('fin.eu', el.dataset.v); render(); },
+  'forcar-sync': () => { if (Sync.estado === 'erro' && Sync.msg) toast(Sync.msg, 5000); Sync.pend.length ? Sync.sincronizar() : Sync.puxar(true); },
+  demo: () => { window.scrollTo(0, 0); LS.set('fin.demo', true); Sync.init(); if (!eu()) LS.set('fin.eu', 'Ana'); S.view = 'inicio'; S.ciclo = null; render(); Sync.puxar(true); },
+  'sair-demo': () => { LS.del('fin.demo'); if (['Ana', 'Beto'].includes(eu())) LS.del('fin.eu'); Sync.init(); S.view = 'inicio'; S.ciclo = null; render(); Sync.puxar(true); },
+  'reset-demo': () => { Object.keys(localStorage).filter(k => k.startsWith('fin.demo.')).forEach(k => localStorage.removeItem(k)); Sync.init(); S.ciclo = null; render(); Sync.puxar(true); },
+  conectar: () => {
+    const v = id => ($('#' + id) ? $('#' + id).value.trim() : '');
+    const ant = LS.get('fin.conexao', {}) || {};
+    const c = { owner: v('cx-owner'), repo: v('cx-repo'), token: v('cx-token'), branch: v('cx-branch') || 'main', path: v('cx-path') || 'financas.json', api: ant.api };
+    if (!c.owner || !c.repo || !c.token) return toast('Preencha usuário, repositório e token.');
+    LS.set('fin.conexao', c); LS.del('fin.demo'); Sync.init(); S.view = 'inicio'; S.ciclo = null; render(); Sync.puxar(true);
+  },
+  desconectar: () => { if (!confirm('Remover a conexão deste aparelho?')) return; const c = LS.get('fin.conexao', {}) || {}; delete c.token; LS.set('fin.conexao', c); Sync.init(); S.view = 'inicio'; render(); },
+  'criar-arquivo': () => Sync.criarArquivo(),
+  'ed-add': el => { const box = el.closest('[data-ed]'), key = box.dataset.ed; box.querySelector('.ed-lista').insertAdjacentHTML('beforeend', edLinha(key, EDS[key].novo())); },
+  'ed-del': el => { const row = el.closest('.ed-row'); if (confirm('Remover este item?')) row.remove(); },
+  'ed-salvar': el => { const box = el.closest('[data-ed]'), key = box.dataset.ed; Sync.enfileirar({ t: 'config.set', path: [key], v: lerEditor(box, key) }); toast('Salvo.'); },
+  'geral-salvar': () => {
+    const pessoas = $('#g-pessoas').value.split(',').map(s => s.trim()).filter(Boolean);
+    const f = parseInt($('#g-fech').value, 10), vc = parseInt($('#g-venc').value, 10);
+    if (!pessoas.length || !(f >= 1 && f <= 31) || !(vc >= 1 && vc <= 31)) return toast('Verifique os campos.');
+    Sync.enfileirar([{ t: 'config.set', path: ['pessoas'], v: pessoas }, { t: 'config.set', path: ['cartao'], v: { fechamento: f, vencimento: vc } }]); toast('Salvo.');
+  },
+  csv: () => {
+    const linhas = [['Data', 'Ciclo', 'Descrição', 'Categoria', 'Forma', 'Pessoa', 'Valor total', 'Parcelas']].concat(
+      D().lancamentos.slice().sort((a, b) => a.data.localeCompare(b.data)).map(l => [l.data.split('-').reverse().join('/'), nomeCiclo(l.ciclo || cicloDaData(l.data)), l.descricao || '', nomeCat(l.categoria), nomeForma(l.forma), l.pessoa || '', inputValor(l.valor), l.parcelas || 1]));
+    baixar('lancamentos.csv', '﻿' + linhas.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
+  },
+  backup: () => baixar(`financas-${hojeISO()}.json`, JSON.stringify(D(), null, 1), 'application/json')
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled || $('#sheet').contains(el) && !el.dataset.act) return;
+  const f = ACT[el.dataset.act]; if (f) { e.preventDefault(); f(el, e); }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.chg === 'plano') {
+    const v = parseValor(el.value);
+    if (isNaN(v) || v < 0) { toast('Valor inválido.'); render(); return; }
+    el.value = inputValor(v);
+    Sync.enfileirar({ t: 'plano.set', ciclo: S.ciclo, path: el.dataset.path.split('.'), v });
+  }
+});
+
+/* ----- início ----- */
+Sync.init();
+render();
+if (Sync.store) Sync.puxar(true);
+setInterval(() => { if (document.visibilityState === 'visible' && Sync.store) Sync.puxar(); }, 20000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Sync.store) Sync.puxar(); });
+window.addEventListener('online', () => Sync.store && Sync.sincronizar());
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
